@@ -1,0 +1,119 @@
+{
+  "positionsAvailable": 4520,
+  "positionsTested": 10,
+  "scoreAgreementCount": 10,
+  "scoreAgreementPercent": 100,
+  "averageNodeReductionPercent": 58.44,
+  "results": [
+    {
+      "position": 1,
+      "board": "---------",
+      "movesPlayed": 0,
+      "minimaxNodes": 549946,
+      "alphaBetaNodes": 20866,
+      "nodeReductionPercent": 96.21,
+      "minimaxMedianMs": 170.6485,
+      "alphaBetaMedianMs": 12.6831,
+      "scoresAgree": true
+    },
+    {
+      "position": 2,
+      "board": "XO-------",
+      "movesPlayed": 2,
+      "minimaxNodes": 8232,
+      "alphaBetaNodes": 1079,
+      "nodeReductionPercent": 86.89,
+      "minimaxMedianMs": 4.3577,
+      "alphaBetaMedianMs": 0.4822,
+      "scoresAgree": true
+    },
+    {
+      "position": 3,
+      "board": "----XO---",
+      "movesPlayed": 2,
+      "minimaxNodes": 7064,
+      "alphaBetaNodes": 843,
+      "nodeReductionPercent": 88.07,
+      "minimaxMedianMs": 2.8316,
+      "alphaBetaMedianMs": 0.3718,
+      "scoresAgree": true
+    },
+    {
+      "position": 4,
+      "board": "-------OX",
+      "movesPlayed": 2,
+      "minimaxNodes": 8232,
+      "alphaBetaNodes": 736,
+      "nodeReductionPercent": 91.06,
+      "minimaxMedianMs": 3.4302,
+      "alphaBetaMedianMs": 0.2469,
+      "scoresAgree": true
+    },
+    {
+      "position": 5,
+      "board": "XOXO-----",
+      "movesPlayed": 4,
+      "minimaxNodes": 234,
+      "alphaBetaNodes": 66,
+      "nodeReductionPercent": 71.79,
+      "minimaxMedianMs": 0.0364,
+      "alphaBetaMedianMs": 0.0101,
+      "scoresAgree": true
+    },
+    {
+      "position": 6,
+      "board": "-OX--O--X",
+      "movesPlayed": 4,
+      "minimaxNodes": 234,
+      "alphaBetaNodes": 102,
+      "nodeReductionPercent": 56.41,
+      "minimaxMedianMs": 0.0339,
+      "alphaBetaMedianMs": 0.0157,
+      "scoresAgree": true
+    },
+    {
+      "position": 7,
+      "board": "-----OOXX",
+      "movesPlayed": 4,
+      "minimaxNodes": 246,
+      "alphaBetaNodes": 174,
+      "nodeReductionPercent": 29.27,
+      "minimaxMedianMs": 0.0375,
+      "alphaBetaMedianMs": 0.0288,
+      "scoresAgree": true
+    },
+    {
+      "position": 8,
+      "board": "XOXOXO---",
+      "movesPlayed": 6,
+      "minimaxNodes": 8,
+      "alphaBetaNodes": 6,
+      "nodeReductionPercent": 25,
+      "minimaxMedianMs": 0.0013,
+      "alphaBetaMedianMs": 0.0011,
+      "scoresAgree": true
+    },
+    {
+      "position": 9,
+      "board": "-XO-OXX-O",
+      "movesPlayed": 6,
+      "minimaxNodes": 14,
+      "alphaBetaNodes": 10,
+      "nodeReductionPercent": 28.57,
+      "minimaxMedianMs": 0.0023,
+      "alphaBetaMedianMs": 0.0018,
+      "scoresAgree": true
+    },
+    {
+      "position": 10,
+      "board": "---OOXOXX",
+      "movesPlayed": 6,
+      "minimaxNodes": 9,
+      "alphaBetaNodes": 8,
+      "nodeReductionPercent": 11.11,
+      "minimaxMedianMs": 0.0024,
+      "alphaBetaMedianMs": 0.0025,
+      "scoresAgree": true
+    }
+  ]
+}

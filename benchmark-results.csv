@@ -1,0 +1,11 @@
+position,board,movesPlayed,minimaxNodes,alphaBetaNodes,nodeReductionPercent,minimaxMedianMs,alphaBetaMedianMs,scoresAgree
+1,---------,0,549946,20866,96.21,170.6485,12.6831,true
+2,XO-------,2,8232,1079,86.89,4.3577,0.4822,true
+3,----XO---,2,7064,843,88.07,2.8316,0.3718,true
+4,-------OX,2,8232,736,91.06,3.4302,0.2469,true
+5,XOXO-----,4,234,66,71.79,0.0364,0.0101,true
+6,-OX--O--X,4,234,102,56.41,0.0339,0.0157,true
+7,-----OOXX,4,246,174,29.27,0.0375,0.0288,true
+8,XOXOXO---,6,8,6,25,0.0013,0.0011,true
+9,-XO-OXX-O,6,14,10,28.57,0.0023,0.0018,true
+10,---OOXOXX,6,9,8,11.11,0.0024,0.0025,true
