@@ -110,6 +110,55 @@ button:disabled { cursor: default; }
 .cell-o { color: #c4a4ff; }
 .cell-winning { border-color: #6ee7a8; background: #16372e; box-shadow: 0 0 24px #6ee7a822; }
 
+.connect-four-panel { max-width: 700px; margin: 0 auto; }
+.connect-four-board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #303c55;
+  border-radius: 14px;
+  background: #101c33;
+}
+.connect-four-column {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.connect-four-column:not(:disabled):hover .connect-four-cell:not(.piece-R):not(.piece-Y) {
+  border-color: #6ee7f9;
+  background: #1a2b40;
+}
+.connect-four-column:focus-visible { outline: 2px solid #6ee7f9; outline-offset: 3px; }
+.connect-four-cell {
+  display: block;
+  aspect-ratio: 1;
+  border: 1px solid #303c55;
+  border-radius: 50%;
+  background: #080b13;
+}
+.connect-four-cell.piece-R, .connect-four-piece.piece-R {
+  border-color: #ff7a7a;
+  background: #ff6464;
+  box-shadow: 0 0 14px #ff646455;
+}
+.connect-four-cell.piece-Y, .connect-four-piece.piece-Y {
+  border-color: #ffd76e;
+  background: #ffd166;
+  box-shadow: 0 0 14px #ffd16655;
+}
+.connect-four-piece {
+  display: block;
+  flex: 0 0 24px;
+  height: 24px;
+  border: 1px solid #303c55;
+  border-radius: 50%;
+  background: #080b13;
+}
+
 .game-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 20px; }
 .button-primary, .button-secondary { border-radius: 9px; padding: 12px 15px; font-size: 12px; font-weight: 600; transition: .15s; }
 .button-primary { border: 1px solid #6ee7f9; background: #6ee7f9; color: #08111c; }
@@ -405,4 +454,35 @@ button:disabled { cursor: default; }
   .research-metrics {
     grid-template-columns: 1fr;
   }
+}
+
+.connect-four-mode-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+
+.mode-btn {
+  padding: 12px 22px;
+  border: 1px solid #28515f;
+  border-radius: 10px;
+  background: #102a35;
+  color: #e6fbff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.mode-btn:hover {
+  border-color: #2dd4bf;
+  transform: translateY(-2px);
+}
+
+.mode-btn.active {
+  background: #0f766e;
+  border-color: #5eead4;
+  color: white;
 }
