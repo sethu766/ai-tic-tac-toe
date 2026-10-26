@@ -1,7 +1,7 @@
 import GameTree from "./components/GameTree.jsx";
 import { useMemo, useState } from "react";
 import "./App.css";
-
+import ConnectFour from "./components/ConnectFour";
 import {
   createBoard,
   getGameStatus,
@@ -24,6 +24,7 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showTree, setShowTree] = useState(false);
+  const [showConnectFour, setShowConnectFour] = useState(false);
 
   const status = getGameStatus(board);
   const ai = human === "X" ? "O" : "X";
@@ -195,7 +196,9 @@ function undoMove() {
 
   const winning = status.winningCombination || [];
 
-  return (
+  return showConnectFour ? (
+    <ConnectFour onBack={() => setShowConnectFour(false)} />
+  ) : (
     <main className="app-shell">
       <header className="topbar">
         <a className="brand" href="#home">
@@ -315,12 +318,18 @@ function undoMove() {
               Reset board
             </button>
             <button
-  className="button-secondary"
-  onClick={undoMove}
-  disabled={history.length === 0}
->
-  Undo
-</button>
+              className="button-secondary"
+              onClick={undoMove}
+              disabled={history.length === 0}
+            >
+              Undo
+            </button>
+            <button
+              className="button-secondary"
+              onClick={() => setShowConnectFour(v => !v)}
+            >
+              {showConnectFour ? "Back to NEURALTAC" : "Play Connect Four"}
+            </button>
           </div>
 
           <div className="scoreboard">
