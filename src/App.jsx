@@ -1,3 +1,4 @@
+// SECTION 1: IMPORTS — Load the decision-tree component, React hooks, styles, game component, engine functions, algorithms, and benchmark utility.
 import GameTree from "./components/GameTree.jsx";
 import { useMemo, useState } from "react";
 import "./App.css";
@@ -7,14 +8,14 @@ import {
   getGameStatus,
   getAvailableMoves,
 } from "./engine/gameEngine";
-
 import { findBestMove } from "./engine/minimax";
 import { findBestMoveAlphaBeta } from "./engine/alphaBeta";
 import { compareAlgorithms } from "./utils/benchmark";
-
+// SECTION 2: INITIAL SCOREBOARD — Start the win counts for X, O, and draws at zero.
 const EMPTY_SCORES = { X: 0, O: 0, draws: 0 };
-
+// SECTION 3: MAIN APP COMPONENT — Coordinates the Tic-Tac-Toe game, AI modes, analytics, history, and page interface.
 export default function App() {
+// SECTION 3A: APPLICATION STATE — Store the board, mode, difficulty, human symbol, turn, scores, history, and panel visibility.
   const [board, setBoard] = useState(createBoard);
   const [mode, setMode] = useState("human");
   const [difficulty, setDifficulty] = useState("hard");
@@ -25,28 +26,22 @@ export default function App() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showTree, setShowTree] = useState(false);
   const [showConnectFour, setShowConnectFour] = useState(false);
-
+// SECTION 3B: DERIVED GAME INFORMATION — Calculate the current status and identify the AI symbol opposite the human.
   const status = getGameStatus(board);
   const ai = human === "X" ? "O" : "X";
-
-  
+// SECTION 4: ALGORITHM BENCHMARKING — When analytics are visible, run Minimax and Alpha-Beta on copies of the current board and compare results.
   const analytics = useMemo(() => {
     if (!showAnalytics) return null;
-
     const player = turn === "X" || turn === "O" ? turn : "O";
-
     try {
       const startMinimax = performance.now();
       const minimaxResult = findBestMove([...board], player);
       const minimaxTime = performance.now() - startMinimax;
-
       const startAlphaBeta = performance.now();
       const alphaBetaResult = findBestMoveAlphaBeta([...board], player);
       const alphaBetaTime = performance.now() - startAlphaBeta;
-
       const minimaxNodes = minimaxResult.nodesSearched;
       const alphaBetaNodes = alphaBetaResult.nodesSearched;
-
       return {
         minimax: {
           ...minimaxResult,
@@ -68,51 +63,42 @@ export default function App() {
       return null;
     }
   }, [board, turn, showAnalytics]);
-
-
+// SECTION 5: RESET GAME — Create an empty board and reset the turn, move history, and analytics visibility.
   function resetGame() {
     setBoard(createBoard());
     setTurn("X");
     setHistory([]);
     setShowAnalytics(false);
   }
-  
+// SECTION 6: UNDO MOVE — Remove the latest move, or both the AI move and preceding human move in Human vs AI mode.
 function undoMove() {
   if (history.length === 0) return;
-
   // In Human vs AI, undo the AI's move and the preceding human move.
   const movesToUndo = mode === "human" ? 2 : 1;
   const remainingHistory = history.slice(
     0,
     Math.max(0, history.length - movesToUndo)
   );
-
   const previousBoard =
     remainingHistory.length > 0
       ? [...remainingHistory[remainingHistory.length - 1].board]
       : createBoard();
-
   setHistory(remainingHistory);
   setBoard(previousBoard);
-
   const xCount = previousBoard.filter((cell) => cell === "X").length;
   const oCount = previousBoard.filter((cell) => cell === "O").length;
-
   setTurn(xCount === oCount ? "X" : "O");
   setShowAnalytics(false);
   setShowTree(false);
 }
-
-
+// SECTION 7: FINISH A MOVE — Save the new board and move history, update scores when the game ends, or pass the turn.
   function finishMove(nextBoard, player, nextTurn) {
     const result = getGameStatus(nextBoard);
-
     setBoard(nextBoard);
     setHistory((previous) => [
       ...previous,
       { board: [...nextBoard], player, moveNumber: previous.length + 1 },
     ]);
-
     if (result.status !== "playing") {
       setScores((previous) => ({
         ...previous,
@@ -123,20 +109,16 @@ function undoMove() {
     } else {
       setTurn(nextTurn);
     }
-
     setShowAnalytics(false);
   }
-
+// SECTION 8: HANDLE A BOARD CLICK — Validate the human move, apply it, and trigger the AI response when appropriate.
   function playCell(index) {
     if (status.status !== "playing" || board[index] !== null) return;
     if (mode === "ai" || (mode === "human" && turn !== human)) return;
-
     const nextBoard = [...board];
     nextBoard[index] = turn;
-
     const nextTurn = turn === "X" ? "O" : "X";
     finishMove(nextBoard, turn, nextTurn);
-
     if (
       mode === "human" &&
       getGameStatus(nextBoard).status === "playing" &&
@@ -150,56 +132,49 @@ function undoMove() {
       }
     }
   }
-
+// SECTION 9: SELECT AN AI MOVE — Easy chooses randomly; Medium sometimes chooses randomly; otherwise Alpha-Beta chooses the move.
   function selectAIMove(position, player, level) {
     const moves = getAvailableMoves(position);
     if (!moves.length) return null;
-
     if (level === "easy") {
       return moves[Math.floor(Math.random() * moves.length)];
     }
-
     if (level === "medium" && Math.random() < 0.5) {
       return moves[Math.floor(Math.random() * moves.length)];
     }
-
     return findBestMoveAlphaBeta(position, player).move;
   }
-
+// SECTION 10: ADVANCE ONE AI MOVE — Choose the move using the algorithm associated with the selected difficulty, then update the board.
   function stepAI() {
     if (status.status !== "playing") return;
-
     const result =
       difficulty === "easy"
         ? { move: getAvailableMoves(board)[0] }
         : difficulty === "medium"
           ? findBestMove(board, turn)
           : findBestMoveAlphaBeta(board, turn);
-
     if (result.move === null || result.move === undefined) return;
-
     const nextBoard = [...board];
     nextBoard[result.move] = turn;
     finishMove(nextBoard, turn, turn === "X" ? "O" : "X");
   }
-
+// SECTION 11: AUTO-PLAY — Use Alpha-Beta to choose and apply the current AI player's next move.
   function autoPlay() {
     if (status.status !== "playing") return;
-
     const result = findBestMoveAlphaBeta(board, turn);
     if (result.move === null) return;
-
     const nextBoard = [...board];
     nextBoard[result.move] = turn;
     finishMove(nextBoard, turn, turn === "X" ? "O" : "X");
   }
-
+// SECTION 12: WINNING-CELL HIGHLIGHTING — Keep the winning indexes available for the board's CSS classes.
   const winning = status.winningCombination || [];
-
+// SECTION 13: PAGE RENDERING — Show the Connect Four extension when selected; otherwise render the main NEURALTAC interface.
   return showConnectFour ? (
     <ConnectFour onBack={() => setShowConnectFour(false)} />
   ) : (
     <main className="app-shell">
+{/* SECTION 13A: TOP NAVIGATION — Display the NEURALTAC brand and AI Lab version label. */}
       <header className="topbar">
         <a className="brand" href="#home">
           <span className="brand-icon">✳</span>
@@ -209,7 +184,7 @@ function undoMove() {
           <span className="live-dot" /> AI LAB / VERSION 1.0
         </span>
       </header>
-
+{/* SECTION 13B: HERO INTRODUCTION — Introduce the project as an adversarial-search and game-theory playground. */}
       <section className="hero" id="home">
         <div className="eyebrow">ADVERSARIAL SEARCH · GAME THEORY</div>
         <h1>Intelligence in <span>every move.</span></h1>
@@ -218,8 +193,9 @@ function undoMove() {
           Challenge the AI or observe its algorithms in action.
         </p>
       </section>
-
+{/* SECTION 13C: MAIN WORKSPACE — Arrange the game arena beside the AI configuration, analysis, and history panels. */}
       <section className="workspace">
+{/* SECTION 13D: GAME ARENA — Contains mode and difficulty controls, turn status, the board, actions, and score totals. */}
         <div className="game-panel panel">
           <div className="panel-heading">
             <div>
@@ -230,7 +206,7 @@ function undoMove() {
               {status.status === "playing" ? "● LIVE" : "● FINISHED"}
             </span>
           </div>
-
+{/* SECTION 13E: GAME SETTINGS — Let the user select Human vs AI or AI vs AI, and choose the difficulty. */}
           <div className="control-row">
             <label>
               GAME MODE
@@ -242,7 +218,6 @@ function undoMove() {
                 <option value="ai">AI vs AI</option>
               </select>
             </label>
-
             <label>
               DIFFICULTY
               <select value={difficulty} onChange={(e) => {
@@ -255,7 +230,7 @@ function undoMove() {
               </select>
             </label>
           </div>
-
+{/* SECTION 13F: TURN BANNER — Display the winning player, draw, current turn, or AI-thinking state. */}
           <div className="turn-banner">
             <span className={`turn-symbol ${turn === "X" ? "symbol-x" : "symbol-o"}`}>
               {status.status === "won" ? status.winner : status.status === "draw" ? "=" : turn}
@@ -279,7 +254,7 @@ function undoMove() {
               </small>
             </div>
           </div>
-
+{/* SECTION 13G: TIC-TAC-TOE BOARD — Render all nine cells and disable moves that are unavailable or not currently allowed. */}
           <div className="board" role="grid" aria-label="Tic-Tac-Toe board">
             {board.map((cell, index) => (
               <button
@@ -304,7 +279,7 @@ function undoMove() {
               </button>
             ))}
           </div>
-
+{/* SECTION 13H: GAME ACTIONS — Provide new-round, AI-step, auto-play, reset, undo, and Connect Four controls. */}
           <div className="game-actions">
             <button className="button-primary" onClick={mode === "ai" ? stepAI : resetGame}>
               {mode === "ai" ? "Advance AI move →" : "↻ New round"}
@@ -331,15 +306,16 @@ function undoMove() {
               {showConnectFour ? "Back to NEURALTAC" : "Play Connect Four"}
             </button>
           </div>
-
+{/* SECTION 13I: SCOREBOARD — Show accumulated wins for X and O and the number of draws. */}
           <div className="scoreboard">
             <div><span className="score-x">X</span><strong>{scores.X}</strong><small>WINS</small></div>
             <div><span className="score-o">O</span><strong>{scores.O}</strong><small>WINS</small></div>
             <div><span className="score-draw">=</span><strong>{scores.draws}</strong><small>DRAWS</small></div>
           </div>
         </div>
-
+{/* SECTION 13J: SIDE PANELS — Present AI configuration, benchmark analytics, the decision tree, and move history. */}
         <aside className="side-column">
+{/* SECTION 13K: AI CONFIGURATION PANEL — Explain the Minimax baseline and Alpha-Beta optimization, then expose analysis tools. */}
           <section className="panel side-panel">
             <div className="section-kicker">02 / AI CONFIGURATION</div>
             <h2>Decision engine</h2>
@@ -347,7 +323,6 @@ function undoMove() {
               The agent searches possible future states and evaluates
               outcomes to select an optimal move.
             </p>
-
             <div className="algorithm-card">
               <span className="algorithm-icon">M</span>
               <div><strong>Minimax</strong><small>Exhaustive adversarial search</small></div>
@@ -358,41 +333,36 @@ function undoMove() {
               <div><strong>Alpha-Beta</strong><small>Bound-based branch pruning</small></div>
               <span className="algorithm-tag accent-text">OPTIMIZED</span>
             </div>
-
             <button
               className="button-primary full-width"
               onClick={() => setShowAnalytics(!showAnalytics)}
             >
               {showAnalytics ? "Hide analysis" : "Analyze current position →"}
             </button>
-
+{/* SECTION 13N: LIVE ANALYTICS DETAILS — Show search counts, timing measurements, pruning counts, node reduction, and score agreement when available. */}
             {analytics && (
               <div className="analytics-results">
                 <h3>Benchmark results</h3>
-                
+{/* SECTION 13L: STATIC RESEARCH SUMMARY — Display the configured benchmark-summary text and comparison-graph images. */}
 <div className="research-benchmark">
   <p className="research-intro">
     Experimental comparison of Minimax and Alpha-Beta Pruning
     across 10 selected board positions.
   </p>
-
   <div className="research-metrics">
     <div className="research-metric">
       <span>Positions tested</span>
       <strong>10 / 4,520</strong>
     </div>
-
     <div className="research-metric">
       <span>Score agreement</span>
       <strong>100%</strong>
     </div>
-
     <div className="research-metric">
       <span>Average node reduction</span>
       <strong>58.44%</strong>
     </div>
   </div>
-
   <div className="research-graph">
     <h4>Search Node Comparison</h4>
     <img
@@ -400,7 +370,6 @@ function undoMove() {
       alt="Minimax and Alpha-Beta search node comparison"
     />
   </div>
-
   <div className="research-graph">
     <h4>Execution Time Comparison</h4>
     <img
@@ -408,7 +377,6 @@ function undoMove() {
       alt="Execution time comparison between Minimax and Alpha-Beta"
     />
   </div>
-
   <div className="research-graph">
     <h4>Search Node Reduction</h4>
     <img
@@ -417,14 +385,12 @@ function undoMove() {
     />
   </div>
 </div>
-
-                
+{/* SECTION 13M: LIVE NODE COMPARISON — Visualize the searched-node counts returned by the current algorithm comparison. */}
 <div className="comparison-chart">
   <div className="chart-heading">
     <span>Search effort</span>
     <span>Nodes explored</span>
   </div>
-
   <div className="chart-row">
     <span className="chart-label">Minimax</span>
     <div className="chart-track">
@@ -441,7 +407,6 @@ function undoMove() {
     </div>
     <strong>{analytics.minimax.nodesSearched}</strong>
   </div>
-
   <div className="chart-row">
     <span className="chart-label">Alpha-Beta</span>
     <div className="chart-track">
@@ -463,7 +428,6 @@ function undoMove() {
     <strong>{analytics.alphaBeta.nodesSearched}</strong>
   </div>
 </div>
-
                 <div className="metric-row">
                   <span>Minimax nodes</span>
                   <strong>{analytics.minimax.nodesSearched}</strong>
@@ -494,23 +458,20 @@ function undoMove() {
                 </div>
               </div>
             )}
-            
               <button
               className="button-secondary full-width"
               onClick={() => setShowTree((previous) => !previous)}
               >
               {showTree ? "Hide game tree" : "Explore game tree →"}
-
               </button>
-
+{/* SECTION 13O: GAME TREE PANEL — Render the candidate-move visualization when the user opens it. */}
 {showTree && (
   <GameTree board={board} player={turn} />
 )}
-
           </section>
-
           <section className="panel side-panel">
-            <div className="section-kicker">03 / MOVE HISTORY</div>
+            {/* SECTION 13P: MOVE HISTORY — List recorded moves in order, including the player and cell played. */}
+<div className="section-kicker">03 / MOVE HISTORY</div>
             <h2>Game timeline</h2>
             {history.length === 0 ? (
               <p className="muted">Your moves will appear here as the game progresses.</p>
@@ -535,7 +496,7 @@ function undoMove() {
           </section>
         </aside>
       </section>
-
+{/* SECTION 13Q: FOOTER — Display the project name and the key search algorithms used. */}
       <footer className="footer">
         <span>NEURALTAC © 2026</span>
         <span>MINIMAX · ALPHA-BETA PRUNING · ADVERSARIAL SEARCH</span>
