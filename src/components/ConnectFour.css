@@ -1,0 +1,110 @@
+/* Connect Four extension — matched to the existing NEURALTAC interface */
+.connect-four-shell { padding-bottom: 8px; }
+.connect-four-top-actions { display: flex; align-items: center; gap: 14px; }
+.connect-four-top-actions .button-secondary { white-space: nowrap; }
+.connect-four-hero { padding-top: 46px; padding-bottom: 32px; }
+.connect-four-workspace { grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr); }
+.connect-four-game-panel { min-width: 0; }
+.connect-four-controls { margin-top: 18px; }
+.connect-four-controls select { min-width: 0; }
+.connect-four-hero p { max-width: 580px; }
+.connect-four-board-wrap { max-width: 600px; margin: 0 auto; }
+.connect-four-column-labels {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 12px 8px;
+  color: #8293ae;
+  font: 10px 'DM Mono', monospace;
+  text-align: center;
+}
+.connect-four-board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: clamp(4px, 1vw, 9px);
+  padding: clamp(8px, 1.5vw, 13px);
+  border: 1px solid #303c55;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #111c30, #0b1220);
+  box-shadow: inset 0 1px 0 #ffffff08, 0 16px 36px #0003;
+}
+.connect-four-cell {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid #303c55;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #101a2b, #080b13 72%);
+  transition: border-color .15s, transform .15s, box-shadow .15s, background .15s;
+}
+.connect-four-cell:not(:disabled):hover {
+  border-color: #6ee7f9;
+  box-shadow: 0 0 0 3px #6ee7f91a;
+  transform: translateY(-1px);
+}
+.connect-four-cell:focus-visible { outline: 2px solid #6ee7f9; outline-offset: 2px; }
+.connect-four-cell.piece-R {
+  border-color: #ff8585;
+  background: radial-gradient(circle at 32% 25%, #ffb0b0, #ff6464 48%, #c93d58);
+  box-shadow: inset 0 2px 5px #ffffff45, 0 0 14px #ff646433;
+}
+.connect-four-cell.piece-Y {
+  border-color: #ffe29a;
+  background: radial-gradient(circle at 32% 25%, #fff0b8, #ffd166 48%, #d99a2b);
+  box-shadow: inset 0 2px 5px #ffffff45, 0 0 14px #ffd1662b;
+}
+.connect-four-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 20px;
+  margin-top: 16px;
+  color: #c3d2df;
+  font-size: 11px;
+}
+.connect-four-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.connect-four-legend small { color: #8293ae; }
+.connect-four-piece { display: inline-block; width: 13px; height: 13px; border-radius: 50%; }
+.connect-four-piece.piece-R { background: #ff6464; box-shadow: 0 0 10px #ff646455; }
+.connect-four-piece.piece-Y { background: #ffd166; box-shadow: 0 0 10px #ffd16644; }
+.connect-four-board-note { color: #8293ae; }
+.connect-symbol-red { color: #ff8585 !important; }
+.connect-symbol-yellow { color: #ffd166 !important; }
+.status-pill.finished { color: #c4a4ff; background: #2b2144; }
+.connect-four-depth {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 16px; padding: 13px 14px; border: 1px solid #29354a;
+  border-radius: 10px; background: #0c1220; color: #98a5be; font-size: 11px;
+}
+.connect-four-depth strong { color: #6ee7f9; font: 600 13px 'DM Mono', monospace; }
+.connect-four-stat-intro { color: #98a5be; font-size: 12px; }
+.connect-four-stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.connect-four-stat-grid .research-metric { padding: 13px; }
+.connect-four-stat-grid .research-metric strong { display: block; overflow-wrap: anywhere; font-size: clamp(16px, 2vw, 21px); }
+.connect-four-footnote { color: #8293ae; font-size: 10px; line-height: 1.7; margin: 14px 0 0; }
+.connect-four-empty-state {
+  display: grid; justify-items: start; gap: 8px; margin-top: 14px; padding: 18px;
+  border: 1px dashed #303c55; border-radius: 12px; background: #0a101d;
+}
+.connect-four-empty-icon { color: #6ee7f9; font-size: 25px; }
+.connect-four-empty-state strong { font-size: 12px; }
+.connect-four-empty-state p { margin: 0; color: #98a5be; font-size: 11px; line-height: 1.7; }
+.connect-four-how-list { padding-left: 18px; margin: 12px 0 0; color: #98a5be; font-size: 12px; line-height: 1.9; }
+.connect-four-how-list li + li { margin-top: 5px; }
+@media (max-width: 760px) {
+  .connect-four-workspace { grid-template-columns: 1fr; }
+  .connect-four-top-actions { gap: 8px; }
+  .connect-four-top-actions .topbar-tag { display: none; }
+  .connect-four-column-labels { gap: 4px; padding-inline: 8px; }
+}
+@media (max-width: 440px) {
+  .connect-four-shell { width: min(100% - 20px, 1180px); }
+  .connect-four-top-actions .button-secondary { padding: 9px 10px; font-size: 10px; }
+  .connect-four-board { gap: 4px; padding: 7px; }
+  .connect-four-legend { gap: 10px; }
+  .connect-four-board-note { width: 100%; justify-content: center; }
+  .connect-four-stat-grid { grid-template-columns: 1fr 1fr; }
+}
