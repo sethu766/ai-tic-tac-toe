@@ -1,92 +1,103 @@
-/*
- * Minimax Agent
- * X is the human; O is the AI in this demo.
+/**
+ * MinimaxAgent
+ *
+ * Concrete AI agent implementing classical exhaustive Minimax adversarial search.
+ * Explores all reachable game tree states (or up to configured depth) to guarantee
+ * game-theoretically optimal decision making.
  */
 
-const WINNING_LINES = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],
-  [0, 4, 8], [2, 4, 6]
-];
+import { BaseAgent } from "./BaseAgent.js";
+import { findBestMove as findBestMoveTtt } from "../engine/minimax.js";
+import { connectFourMinimax } from "../engine/connectFourEngine.js";
 
-function getWinner(board) {
-  for (const [a, b, c] of WINNING_LINES) {
-    if (
-      board[a] !== null &&
-      board[a] === board[b] &&
-      board[b] === board[c]
-    ) {
-      return board[a];
-    }
-  }
-
-  return null;
-}
-
-function minimax(board, currentPlayer, aiPlayer, depth) {
-  const opponent = aiPlayer === "O" ? "X" : "O";
-  const winner = getWinner(board);
-
-  // Prefer faster wins and slower losses.
-  if (winner === aiPlayer) return 10 - depth;
-  if (winner === opponent) return depth - 10;
-
-  const legalMoves = board
-    .map((cell, index) => cell === null ? index : null)
-    .filter(index => index !== null);
-
-  if (legalMoves.length === 0) return 0;
-
-  if (currentPlayer === aiPlayer) {
-    let bestScore = -Infinity;
-
-    for (const move of legalMoves) {
-      board[move] = currentPlayer;
-      const score = minimax(
-        board, opponent, aiPlayer, depth + 1
-      );
-      board[move] = null;
-
-      bestScore = Math.max(bestScore, score);
-    }
-
-    return bestScore;
-  }
-
-  let bestScore = Infinity;
-
-  for (const move of legalMoves) {
-    board[move] = currentPlayer;
-    const score = minimax(
-      board, aiPlayer, aiPlayer, depth + 1
+export class MinimaxAgent extends BaseAgent {
+  constructor() {
+    super(
+      "minimax",
+      "Minimax Agent",
+      "Performs exhaustive adversarial minimax search exploring all candidate branches to identify game-theoretically optimal moves.",
+      ["tic-tac-toe", "connect-four"]
     );
-    board[move] = null;
-
-    bestScore = Math.min(bestScore, score);
   }
 
-  return bestScore;
+  /**
+   * Executes Minimax search on the game state and returns the optimal move.
+   *
+   * @param {Array} gameState Current board state
+   * @param {Object} context Search context { game, player, depth, ... }
+   * @returns {Object} Standardized decision object with move and search statistics
+   */
+  chooseMove(gameState, context = {}) {
+    const startTime = performance.now();
+    const safeBoard = this.cloneBoard(gameState);
+    const game = this.detectGame(safeBoard, context);
+    const player = context.player || (game === "connect-four" ? "Y" : "O");
+
+    // Prevent search if game is already terminal
+    if (this.isGameOver(safeBoard, game)) {
+      const elapsed = performance.now() - startTime;
+      return this.formatDecision(null, {
+        executionTimeMs: elapsed,
+        nodesSearched: 0,
+        nodesPruned: 0,
+        score: null,
+        metadata: { reason: "Game is already over" }
+      });
+    }
+
+    const legalMoves = this.getLegalMoves(safeBoard, game);
+    if (!legalMoves || legalMoves.length === 0) {
+      const elapsed = performance.now() - startTime;
+      return this.formatDecision(null, {
+        executionTimeMs: elapsed,
+        nodesSearched: 0,
+        nodesPruned: 0,
+        score: null,
+        metadata: { reason: "No legal moves remaining" }
+      });
+    }
+
+    let searchResult;
+    let searchDepth = null;
+
+    if (game === "connect-four") {
+      // Connect Four uses depth-limited search
+      searchDepth = context.depth != null ? context.depth : 4;
+      searchResult = connectFourMinimax(safeBoard, searchDepth, player, player);
+    } else {
+      // Tic-Tac-Toe full tree minimax search
+      searchResult = findBestMoveTtt(safeBoard, player);
+      searchDepth = 9; // Max depth of 3x3 game
+    }
+
+    const elapsed = performance.now() - startTime;
+
+    return this.formatDecision(searchResult.move, {
+      executionTimeMs: elapsed,
+      nodesSearched: searchResult.nodesSearched ?? searchResult.nodes ?? 1,
+      nodesPruned: 0, // Classical minimax does not perform branch pruning
+      score: searchResult.score ?? 0,
+      depth: searchDepth,
+      strategy: "minimax",
+      metadata: {
+        game,
+        player,
+        algorithm: "Minimax Exhaustive Search"
+      }
+    });
+  }
 }
 
+// Default singleton instance
+export const minimaxAgentInstance = new MinimaxAgent();
+
+/**
+ * Legacy wrapper function for backward compatibility.
+ */
 export function minimaxAgent(board, aiPlayer = "O") {
-  const opponent = aiPlayer === "O" ? "X" : "O";
-  let bestMove = null;
-  let bestScore = -Infinity;
-
-  for (let i = 0; i < board.length; i++) {
-    if (board[i] !== null) continue;
-
-    board[i] = aiPlayer;
-    const score = minimax(
-      board, opponent, aiPlayer, 1
-    );
-    board[i] = null;
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestMove = i;
-    }
-  }
-
-  return bestMove;
+  const result = minimaxAgentInstance.chooseMove(board, {
+    game: "tic-tac-toe",
+    player: aiPlayer
+  });
+  return result ? result.move : null;
 }

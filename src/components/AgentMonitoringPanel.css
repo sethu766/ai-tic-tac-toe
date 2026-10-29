@@ -1,0 +1,250 @@
+/* Agent Control & Monitoring Panel Styles */
+.agent-panel {
+  margin-top: 20px;
+  border: 1px solid #273148;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #101726, #090e18);
+  padding: 20px;
+  box-shadow: 0 12px 36px #0004;
+}
+
+.agent-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #202a3d;
+}
+
+.agent-title-wrap h3 {
+  margin: 4px 0 0;
+  font-size: 17px;
+  letter-spacing: -0.3px;
+  color: #edf2ff;
+}
+
+.agent-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.agent-status-badge.coordinating {
+  background: #14352c;
+  color: #6ee7a8;
+  border: 1px solid #6ee7a844;
+}
+
+.agent-status-badge.idle {
+  background: #1b263b;
+  color: #8293ae;
+  border: 1px solid #303c55;
+}
+
+.agent-strategy-select-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: #080d17;
+  border: 1px solid #232d42;
+  border-radius: 10px;
+}
+
+.agent-strategy-select-row label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #8fa2bf;
+  white-space: nowrap;
+}
+
+.agent-strategy-select-row select {
+  flex: 1;
+  padding: 6px 10px;
+  background: #111a2d;
+  color: #edf2ff;
+  border: 1px solid #303d59;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.agent-active-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: #0c1322;
+  border: 1px solid #28354c;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.agent-card-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #142838;
+  color: #6ee7f9;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.agent-card-icon.minimax {
+  background: #17243b;
+  color: #6ee7f9;
+}
+
+.agent-card-icon.alphabeta {
+  background: #251b3a;
+  color: #c4a4ff;
+}
+
+.agent-card-icon.random {
+  background: #2a2416;
+  color: #ffd166;
+}
+
+.agent-card-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-card-top strong {
+  font-size: 13px;
+  color: #edf2ff;
+}
+
+.agent-strategy-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: #1b263b;
+  color: #6ee7f9;
+  letter-spacing: 0.8px;
+}
+
+.agent-role-desc {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #98a5be;
+}
+
+.agent-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.agent-metric-item {
+  padding: 10px 12px;
+  background: #0a0f1c;
+  border: 1px solid #202b3f;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-metric-item span {
+  font-size: 10px;
+  color: #8293ae;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+.agent-metric-item strong {
+  font-size: 13px;
+  color: #6ee7f9;
+  font-family: 'DM Mono', monospace;
+  overflow-wrap: anywhere;
+}
+
+.agent-metric-item strong.lavender {
+  color: #c4a4ff;
+}
+
+.agent-metric-item strong.muted-na {
+  color: #55627a;
+}
+
+.agent-fallback-alert {
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  background: #332014;
+  border: 1px solid #73451e;
+  color: #ffb885;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.agent-comparison-box {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #080d17;
+  border: 1px solid #25334d;
+}
+
+.agent-comparison-box h4 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #c4a4ff;
+  letter-spacing: 0.5px;
+}
+
+.comparison-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 10px;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  text-align: left;
+}
+
+.comparison-table th {
+  padding: 6px 8px;
+  color: #8fa2bf;
+  border-bottom: 1px solid #232d42;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+}
+
+.comparison-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #172031;
+  color: #edf2ff;
+  font-family: 'DM Mono', monospace;
+}
+
+.comparison-note {
+  font-size: 10px;
+  color: #8293ae;
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+

@@ -1,110 +1,118 @@
-/*
- * Alpha-Beta Agent
- * Minimax search with alpha-beta pruning.
+/**
+ * AlphaBetaAgent
+ *
+ * Concrete AI agent implementing Minimax with Alpha-Beta Pruning.
+ * Eliminates branches that cannot influence the final decision by maintaining
+ * [alpha, beta] cutoff bounds, returning the same optimal move in fewer node evaluations.
  */
 
-const WINNING_LINES = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],
-  [0, 4, 8], [2, 4, 6]
-];
+import { BaseAgent } from "./BaseAgent.js";
+import { findBestMoveAlphaBeta as findBestMoveAlphaBetaTtt } from "../engine/alphaBeta.js";
+import { connectFourAlphaBeta } from "../engine/connectFourEngine.js";
 
-function getWinner(board) {
-  for (const [a, b, c] of WINNING_LINES) {
-    if (
-      board[a] !== null &&
-      board[a] === board[b] &&
-      board[b] === board[c]
-    ) {
-      return board[a];
-    }
+export class AlphaBetaAgent extends BaseAgent {
+  constructor() {
+    super(
+      "alpha-beta",
+      "Alpha-Beta Agent",
+      "Optimizes minimax search by pruning provably suboptimal branches where alpha >= beta, achieving the same optimal decision in significantly fewer nodes.",
+      ["tic-tac-toe", "connect-four"]
+    );
   }
 
-  return null;
-}
+  /**
+   * Executes Alpha-Beta search on the game state and returns the optimal move with pruning statistics.
+   *
+   * @param {Array} gameState Current board state
+   * @param {Object} context Search context { game, player, difficulty, depth, ... }
+   * @returns {Object} Standardized decision object with move and search statistics
+   */
+  chooseMove(gameState, context = {}) {
+    const startTime = performance.now();
+    const safeBoard = this.cloneBoard(gameState);
+    const game = this.detectGame(safeBoard, context);
+    const player = context.player || (game === "connect-four" ? "Y" : "O");
 
-function alphaBeta(
-  board, currentPlayer, aiPlayer, depth, alpha, beta
-) {
-  const opponent = aiPlayer === "O" ? "X" : "O";
-  const winner = getWinner(board);
+    // Prevent search if game is already terminal
+    if (this.isGameOver(safeBoard, game)) {
+      const elapsed = performance.now() - startTime;
+      return this.formatDecision(null, {
+        executionTimeMs: elapsed,
+        nodesSearched: 0,
+        nodesPruned: 0,
+        score: null,
+        metadata: { reason: "Game is already over" }
+      });
+    }
 
-  if (winner === aiPlayer) return 10 - depth;
-  if (winner === opponent) return depth - 10;
+    const legalMoves = this.getLegalMoves(safeBoard, game);
+    if (!legalMoves || legalMoves.length === 0) {
+      const elapsed = performance.now() - startTime;
+      return this.formatDecision(null, {
+        executionTimeMs: elapsed,
+        nodesSearched: 0,
+        nodesPruned: 0,
+        score: null,
+        metadata: { reason: "No legal moves remaining" }
+      });
+    }
 
-  const legalMoves = board
-    .map((cell, index) => cell === null ? index : null)
-    .filter(index => index !== null);
+    let searchResult;
+    let searchDepth = null;
 
-  if (legalMoves.length === 0) return 0;
+    if (game === "connect-four") {
+      // Resolve search depth from context or difficulty setting
+      if (context.depth != null) {
+        searchDepth = context.depth;
+      } else {
+        const diff = (context.difficulty || "medium").toLowerCase();
+        if (diff === "easy") searchDepth = 2;
+        else if (diff === "hard") searchDepth = 5;
+        else searchDepth = 4;
+      }
 
-  if (currentPlayer === aiPlayer) {
-    let bestScore = -Infinity;
-
-    for (const move of legalMoves) {
-      board[move] = currentPlayer;
-
-      const score = alphaBeta(
-        board, opponent, aiPlayer, depth + 1,
-        alpha, beta
+      searchResult = connectFourAlphaBeta(
+        safeBoard,
+        searchDepth,
+        -Infinity,
+        Infinity,
+        player,
+        player
       );
-
-      board[move] = null;
-      bestScore = Math.max(bestScore, score);
-      alpha = Math.max(alpha, bestScore);
-
-      // Prune branches that cannot improve the result.
-      if (alpha >= beta) break;
+    } else {
+      // Tic-Tac-Toe full tree alpha-beta search
+      searchResult = findBestMoveAlphaBetaTtt(safeBoard, player);
+      searchDepth = 9;
     }
 
-    return bestScore;
+    const elapsed = performance.now() - startTime;
+
+    return this.formatDecision(searchResult.move, {
+      executionTimeMs: elapsed,
+      nodesSearched: searchResult.nodesSearched ?? searchResult.nodes ?? 1,
+      nodesPruned: searchResult.nodesPruned ?? searchResult.pruned ?? 0,
+      score: searchResult.score ?? 0,
+      depth: searchDepth,
+      strategy: "alpha-beta",
+      metadata: {
+        game,
+        player,
+        algorithm: "Alpha-Beta Pruning"
+      }
+    });
   }
-
-  let bestScore = Infinity;
-
-  for (const move of legalMoves) {
-    board[move] = currentPlayer;
-
-    const score = alphaBeta(
-      board, aiPlayer, aiPlayer, depth + 1,
-      alpha, beta
-    );
-
-    board[move] = null;
-    bestScore = Math.min(bestScore, score);
-    beta = Math.min(beta, bestScore);
-
-    if (alpha >= beta) break;
-  }
-
-  return bestScore;
 }
 
+// Default singleton instance
+export const alphaBetaAgentInstance = new AlphaBetaAgent();
+
+/**
+ * Legacy wrapper function for backward compatibility.
+ */
 export function alphaBetaAgent(board, aiPlayer = "O") {
-  const opponent = aiPlayer === "O" ? "X" : "O";
-  let bestMove = null;
-  let bestScore = -Infinity;
-  let alpha = -Infinity;
-  const beta = Infinity;
-
-  for (let i = 0; i < board.length; i++) {
-    if (board[i] !== null) continue;
-
-    board[i] = aiPlayer;
-
-    const score = alphaBeta(
-      board, opponent, aiPlayer, 1, alpha, beta
-    );
-
-    board[i] = null;
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestMove = i;
-    }
-
-    alpha = Math.max(alpha, bestScore);
-  }
-
-  return bestMove;
+  const result = alphaBetaAgentInstance.chooseMove(board, {
+    game: "tic-tac-toe",
+    player: aiPlayer
+  });
+  return result ? result.move : null;
 }

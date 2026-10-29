@@ -1,8 +1,10 @@
-// SECTION 1: IMPORTS — Load the decision-tree component, React hooks, styles, game component, engine functions, algorithms, and benchmark utility.
+// SECTION 1: IMPORTS — Load the decision-tree component, React hooks, styles, game component, engine functions, algorithms, benchmark utility, and Multi-Agent Architecture.
 import GameTree from "./components/GameTree.jsx";
 import { useMemo, useState } from "react";
 import "./App.css";
 import ConnectFour from "./components/ConnectFour";
+import { masterAgent } from "./agents/MasterAgent.js";
+import AgentMonitoringPanel from "./components/AgentMonitoringPanel.jsx";
 import {
   createBoard,
   getGameStatus,
@@ -19,6 +21,8 @@ export default function App() {
   const [board, setBoard] = useState(createBoard);
   const [mode, setMode] = useState("human");
   const [difficulty, setDifficulty] = useState("hard");
+  const [strategy, setStrategy] = useState("auto");
+  const [lastAgentDecision, setLastAgentDecision] = useState(null);
   const [human, setHuman] = useState("X");
   const [turn, setTurn] = useState("X");
   const [scores, setScores] = useState(EMPTY_SCORES);
@@ -63,12 +67,13 @@ export default function App() {
       return null;
     }
   }, [board, turn, showAnalytics]);
-// SECTION 5: RESET GAME — Create an empty board and reset the turn, move history, and analytics visibility.
+// SECTION 5: RESET GAME — Create an empty board and reset the turn, move history, analytics visibility, and agent telemetry.
   function resetGame() {
     setBoard(createBoard());
     setTurn("X");
     setHistory([]);
     setShowAnalytics(false);
+    setLastAgentDecision(null);
   }
 // SECTION 6: UNDO MOVE — Remove the latest move, or both the AI move and preceding human move in Human vs AI mode.
 function undoMove() {
@@ -90,6 +95,7 @@ function undoMove() {
   setTurn(xCount === oCount ? "X" : "O");
   setShowAnalytics(false);
   setShowTree(false);
+  setLastAgentDecision(null);
 }
 // SECTION 7: FINISH A MOVE — Save the new board and move history, update scores when the game ends, or pass the turn.
   function finishMove(nextBoard, player, nextTurn) {
@@ -111,7 +117,7 @@ function undoMove() {
     }
     setShowAnalytics(false);
   }
-// SECTION 8: HANDLE A BOARD CLICK — Validate the human move, apply it, and trigger the AI response when appropriate.
+// SECTION 8: HANDLE A BOARD CLICK — Validate human move, apply it, and request coordinated AI move from Master Agent.
   function playCell(index) {
     if (status.status !== "playing" || board[index] !== null) return;
     if (mode === "ai" || (mode === "human" && turn !== human)) return;
@@ -132,40 +138,48 @@ function undoMove() {
       }
     }
   }
-// SECTION 9: SELECT AN AI MOVE — Easy chooses randomly; Medium sometimes chooses randomly; otherwise Alpha-Beta chooses the move.
+// SECTION 9: SELECT AN AI MOVE — Master Agent selects appropriate agent and returns verified legal move.
   function selectAIMove(position, player, level) {
-    const moves = getAvailableMoves(position);
-    if (!moves.length) return null;
-    if (level === "easy") {
-      return moves[Math.floor(Math.random() * moves.length)];
-    }
-    if (level === "medium" && Math.random() < 0.5) {
-      return moves[Math.floor(Math.random() * moves.length)];
-    }
-    return findBestMoveAlphaBeta(position, player).move;
+    const decision = masterAgent.chooseMove(position, {
+      game: "tic-tac-toe",
+      player,
+      difficulty: level,
+      strategy: strategy !== "auto" ? strategy : null
+    });
+    setLastAgentDecision(decision);
+    return decision ? decision.move : null;
   }
-// SECTION 10: ADVANCE ONE AI MOVE — Choose the move using the algorithm associated with the selected difficulty, then update the board.
+// SECTION 10: ADVANCE ONE AI MOVE — Coordinates an AI step via Master Agent and applies the move.
   function stepAI() {
     if (status.status !== "playing") return;
-    const result =
-      difficulty === "easy"
-        ? { move: getAvailableMoves(board)[0] }
-        : difficulty === "medium"
-          ? findBestMove(board, turn)
-          : findBestMoveAlphaBeta(board, turn);
-    if (result.move === null || result.move === undefined) return;
-    const nextBoard = [...board];
-    nextBoard[result.move] = turn;
-    finishMove(nextBoard, turn, turn === "X" ? "O" : "X");
+    const decision = masterAgent.chooseMove(board, {
+      game: "tic-tac-toe",
+      player: turn,
+      difficulty,
+      strategy: strategy !== "auto" ? strategy : null
+    });
+    setLastAgentDecision(decision);
+    if (decision && decision.move !== null && decision.move !== undefined) {
+      const nextBoard = [...board];
+      nextBoard[decision.move] = turn;
+      finishMove(nextBoard, turn, turn === "X" ? "O" : "X");
+    }
   }
-// SECTION 11: AUTO-PLAY — Use Alpha-Beta to choose and apply the current AI player's next move.
+// SECTION 11: AUTO-PLAY — Delegates to Master Agent to evaluate and execute the next optimal move.
   function autoPlay() {
     if (status.status !== "playing") return;
-    const result = findBestMoveAlphaBeta(board, turn);
-    if (result.move === null) return;
-    const nextBoard = [...board];
-    nextBoard[result.move] = turn;
-    finishMove(nextBoard, turn, turn === "X" ? "O" : "X");
+    const decision = masterAgent.chooseMove(board, {
+      game: "tic-tac-toe",
+      player: turn,
+      difficulty,
+      strategy: strategy !== "auto" ? strategy : null
+    });
+    setLastAgentDecision(decision);
+    if (decision && decision.move !== null) {
+      const nextBoard = [...board];
+      nextBoard[decision.move] = turn;
+      finishMove(nextBoard, turn, turn === "X" ? "O" : "X");
+    }
   }
 // SECTION 12: WINNING-CELL HIGHLIGHTING — Keep the winning indexes available for the board's CSS classes.
   const winning = status.winningCombination || [];
@@ -313,11 +327,23 @@ function undoMove() {
             <div><span className="score-draw">=</span><strong>{scores.draws}</strong><small>DRAWS</small></div>
           </div>
         </div>
-{/* SECTION 13J: SIDE PANELS — Present AI configuration, benchmark analytics, the decision tree, and move history. */}
+{/* SECTION 13J: SIDE PANELS — Present Agent Monitoring Panel, AI configuration, benchmark analytics, the decision tree, and move history. */}
         <aside className="side-column">
+          {/* MULTI-AGENT CONTROL & MONITORING PANEL */}
+          <AgentMonitoringPanel
+            game="tic-tac-toe"
+            masterAgent={masterAgent}
+            lastDecision={lastAgentDecision}
+            selectedStrategy={strategy}
+            onStrategyChange={setStrategy}
+            difficulty={difficulty}
+            currentBoard={board}
+            turn={turn}
+          />
+
 {/* SECTION 13K: AI CONFIGURATION PANEL — Explain the Minimax baseline and Alpha-Beta optimization, then expose analysis tools. */}
           <section className="panel side-panel">
-            <div className="section-kicker">02 / AI CONFIGURATION</div>
+            <div className="section-kicker">03 / AI CONFIGURATION</div>
             <h2>Decision engine</h2>
             <p className="muted">
               The agent searches possible future states and evaluates
@@ -471,7 +497,7 @@ function undoMove() {
           </section>
           <section className="panel side-panel">
             {/* SECTION 13P: MOVE HISTORY — List recorded moves in order, including the player and cell played. */}
-<div className="section-kicker">03 / MOVE HISTORY</div>
+<div className="section-kicker">04 / MOVE HISTORY</div>
             <h2>Game timeline</h2>
             {history.length === 0 ? (
               <p className="muted">Your moves will appear here as the game progresses.</p>
