@@ -288,3 +288,133 @@ export function connectFourMinimax(
   return { score: bestScore, move: bestMove, nodes, pruned: 0 };
 }
 
+
+/**
+ * Extracts the principal variation for Connect Four using Alpha-Beta search.
+ * Follows the best move at each ply alternating between players.
+ * Returns an ordered array of column indices for the predicted optimal line.
+ * This PV is a game-theoretic prediction, NOT a guarantee of human play.
+ *
+ * @param {Array} board Current 6x7 board state
+ * @param {number} depth Remaining search depth
+ * @param {string} currentPlayer Player to move at this ply
+ * @param {string} aiPlayer The AI's player symbol
+ * @returns {number[]} Ordered column indices of the predicted move sequence
+ */
+function extractPVC4AlphaBeta(board, depth, currentPlayer, aiPlayer) {
+  if (depth === 0) return [];
+  const winner = getWinner(board);
+  const moves = getValidMoves(board);
+  if (winner || moves.length === 0) return [];
+
+  const maximizing = currentPlayer === aiPlayer;
+  let bestScore = maximizing ? -Infinity : Infinity;
+  let bestMove = null;
+
+  for (const col of moves) {
+    const nextBoard = dropPiece(board, col, currentPlayer);
+    if (!nextBoard) continue;
+    const nextPlayer = currentPlayer === RED ? YELLOW : RED;
+    const result = connectFourAlphaBeta(nextBoard, depth - 1, -Infinity, Infinity, nextPlayer, aiPlayer);
+    if (
+      (maximizing && result.score > bestScore) ||
+      (!maximizing && result.score < bestScore)
+    ) {
+      bestScore = result.score;
+      bestMove = col;
+    }
+  }
+
+  if (bestMove === null) return [];
+  const nextBoard = dropPiece(board, bestMove, currentPlayer);
+  if (!nextBoard) return [bestMove];
+  const nextPlayer = currentPlayer === RED ? YELLOW : RED;
+  return [bestMove, ...extractPVC4AlphaBeta(nextBoard, depth - 1, nextPlayer, aiPlayer)];
+}
+
+/**
+ * Extracts the principal variation for Connect Four using Minimax search.
+ * Returns an ordered array of column indices for the predicted optimal line.
+ * This PV is a game-theoretic prediction, NOT a guarantee of human play.
+ *
+ * @param {Array} board Current 6x7 board state
+ * @param {number} depth Remaining search depth
+ * @param {string} currentPlayer Player to move at this ply
+ * @param {string} aiPlayer The AI's player symbol
+ * @returns {number[]} Ordered column indices of the predicted move sequence
+ */
+function extractPVC4Minimax(board, depth, currentPlayer, aiPlayer) {
+  if (depth === 0) return [];
+  const winner = getWinner(board);
+  const moves = getValidMoves(board);
+  if (winner || moves.length === 0) return [];
+
+  const maximizing = currentPlayer === aiPlayer;
+  let bestScore = maximizing ? -Infinity : Infinity;
+  let bestMove = null;
+
+  for (const col of moves) {
+    const nextBoard = dropPiece(board, col, currentPlayer);
+    if (!nextBoard) continue;
+    const nextPlayer = currentPlayer === RED ? YELLOW : RED;
+    const result = connectFourMinimax(nextBoard, depth - 1, nextPlayer, aiPlayer);
+    if (
+      (maximizing && result.score > bestScore) ||
+      (!maximizing && result.score < bestScore)
+    ) {
+      bestScore = result.score;
+      bestMove = col;
+    }
+  }
+
+  if (bestMove === null) return [];
+  const nextBoard = dropPiece(board, bestMove, currentPlayer);
+  if (!nextBoard) return [bestMove];
+  const nextPlayer = currentPlayer === RED ? YELLOW : RED;
+  return [bestMove, ...extractPVC4Minimax(nextBoard, depth - 1, nextPlayer, aiPlayer)];
+}
+
+/**
+ * Connect Four Alpha-Beta search with Principal Variation extraction.
+ * Returns the optimal move, score, node statistics, and PV (predicted move sequence).
+ * The PV is a game-theoretic prediction, NOT a guarantee of human play.
+ *
+ * @param {Array} board Current 6x7 board state
+ * @param {number} depth Search depth
+ * @param {string} currentPlayer Player to move
+ * @param {string} aiPlayer The AI's player symbol
+ * @returns {{ score, move, nodes, pruned, pv }}
+ */
+export function connectFourAlphaBetaWithPV(board, depth, currentPlayer, aiPlayer) {
+  const result = connectFourAlphaBeta(board, depth, -Infinity, Infinity, currentPlayer, aiPlayer);
+  const pv = extractPVC4AlphaBeta(board, depth, currentPlayer, aiPlayer);
+  return {
+    score: result.score,
+    move: result.move,
+    nodes: result.nodes,
+    pruned: result.pruned,
+    pv,
+  };
+}
+
+/**
+ * Connect Four Minimax search with Principal Variation extraction.
+ * Returns the optimal move, score, node count, and PV (predicted move sequence).
+ * The PV is a game-theoretic prediction, NOT a guarantee of human play.
+ *
+ * @param {Array} board Current 6x7 board state
+ * @param {number} depth Search depth
+ * @param {string} currentPlayer Player to move
+ * @param {string} aiPlayer The AI's player symbol
+ * @returns {{ score, move, nodes, pv }}
+ */
+export function connectFourMinimaxWithPV(board, depth, currentPlayer, aiPlayer) {
+  const result = connectFourMinimax(board, depth, currentPlayer, aiPlayer);
+  const pv = extractPVC4Minimax(board, depth, currentPlayer, aiPlayer);
+  return {
+    score: result.score,
+    move: result.move,
+    nodes: result.nodes,
+    pv,
+  };
+}

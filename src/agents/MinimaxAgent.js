@@ -7,8 +7,8 @@
  */
 
 import { BaseAgent } from "./BaseAgent.js";
-import { findBestMove as findBestMoveTtt } from "../engine/minimax.js";
-import { connectFourMinimax } from "../engine/connectFourEngine.js";
+import { findBestMove as findBestMoveTtt, findBestMoveWithPV } from "../engine/minimax.js";
+import { connectFourMinimax, connectFourMinimaxWithPV } from "../engine/connectFourEngine.js";
 
 export class MinimaxAgent extends BaseAgent {
   constructor() {
@@ -63,10 +63,14 @@ export class MinimaxAgent extends BaseAgent {
     if (game === "connect-four") {
       // Connect Four uses depth-limited search
       searchDepth = context.depth != null ? context.depth : 4;
-      searchResult = connectFourMinimax(safeBoard, searchDepth, player, player);
+      searchResult = context.withPV
+        ? connectFourMinimaxWithPV(safeBoard, searchDepth, player, player)
+        : connectFourMinimax(safeBoard, searchDepth, player, player);
     } else {
       // Tic-Tac-Toe full tree minimax search
-      searchResult = findBestMoveTtt(safeBoard, player);
+      searchResult = context.withPV
+        ? findBestMoveWithPV(safeBoard, player)
+        : findBestMoveTtt(safeBoard, player);
       searchDepth = 9; // Max depth of 3x3 game
     }
 
@@ -79,12 +83,21 @@ export class MinimaxAgent extends BaseAgent {
       score: searchResult.score ?? 0,
       depth: searchDepth,
       strategy: "minimax",
+      pv: searchResult.pv ?? (searchResult.move !== null && searchResult.move !== undefined ? [searchResult.move] : []),
       metadata: {
         game,
         player,
         algorithm: "Minimax Exhaustive Search"
       }
     });
+  }
+
+  /**
+   * Performs read-only adversarial reasoning analysis on the provided board,
+   * returning the decision along with the principal variation (PV).
+   */
+  analyze(gameState, context = {}) {
+    return this.chooseMove(gameState, { ...context, withPV: true });
   }
 }
 

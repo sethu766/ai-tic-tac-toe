@@ -20,6 +20,8 @@ import {
   getGameStatus as getC4Status
 } from "../engine/connectFourEngine.js";
 
+import { analyzePosition as runAnalysis } from "../engine/analysisService.js";
+
 export class MasterAgent {
   /**
    * Initializes the Master Agent with registered agent modules and decision tracking.
@@ -306,6 +308,7 @@ export class MasterAgent {
       nodesSearched: rawDecision?.nodesSearched ?? 1,
       nodesPruned: rawDecision?.nodesPruned ?? 0,
       score: rawDecision?.score ?? null,
+      pv: rawDecision?.pv ?? null,
       roleExplanation: agent ? agent.description : "Coordinated emergency fallback move.",
       fallbackApplied,
       fallbackReason,
@@ -387,11 +390,28 @@ export class MasterAgent {
         : "Evaluation metrics captured across agents."
     };
   }
+
+  /**
+   * Analyzes the current board position using both Minimax and Alpha-Beta search.
+   * Extracts the principal variation (PV), opponent response prediction, and
+   * comparison metrics, then returns the report without modifying any game state.
+   *
+   * This method is a read-only coordinator — it delegates to the analysisService
+   * and never calls chooseMove or any state setter.
+   *
+   * @param {Array}  board   Current board (1-D for TTT, 2-D for C4).
+   * @param {string} player  The player whose turn it is.
+   * @param {string} game    'tic-tac-toe' or 'connect-four'.
+   * @param {Object} options { depth } for Connect Four depth-limited search.
+   * @returns {Object|null}  Structured analysis report, or null if game is already over.
+   */
+  analyzePosition(board, player, game, options = {}) {
+    return runAnalysis(board, player, game, options, this);
+  }
 }
 
 // Default singleton instance
 export const masterAgent = new MasterAgent();
-
 /**
  * Backward-compatible function export.
  * Accepts (board, difficulty, aiPlayer) and returns the chosen move index.

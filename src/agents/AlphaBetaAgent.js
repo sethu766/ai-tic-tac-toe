@@ -7,8 +7,8 @@
  */
 
 import { BaseAgent } from "./BaseAgent.js";
-import { findBestMoveAlphaBeta as findBestMoveAlphaBetaTtt } from "../engine/alphaBeta.js";
-import { connectFourAlphaBeta } from "../engine/connectFourEngine.js";
+import { findBestMoveAlphaBeta as findBestMoveAlphaBetaTtt, findBestMoveAlphaBetaWithPV } from "../engine/alphaBeta.js";
+import { connectFourAlphaBeta, connectFourAlphaBetaWithPV } from "../engine/connectFourEngine.js";
 
 export class AlphaBetaAgent extends BaseAgent {
   constructor() {
@@ -71,17 +71,21 @@ export class AlphaBetaAgent extends BaseAgent {
         else searchDepth = 4;
       }
 
-      searchResult = connectFourAlphaBeta(
-        safeBoard,
-        searchDepth,
-        -Infinity,
-        Infinity,
-        player,
-        player
-      );
+      searchResult = context.withPV
+        ? connectFourAlphaBetaWithPV(safeBoard, searchDepth, player, player)
+        : connectFourAlphaBeta(
+            safeBoard,
+            searchDepth,
+            -Infinity,
+            Infinity,
+            player,
+            player
+          );
     } else {
       // Tic-Tac-Toe full tree alpha-beta search
-      searchResult = findBestMoveAlphaBetaTtt(safeBoard, player);
+      searchResult = context.withPV
+        ? findBestMoveAlphaBetaWithPV(safeBoard, player)
+        : findBestMoveAlphaBetaTtt(safeBoard, player);
       searchDepth = 9;
     }
 
@@ -94,12 +98,21 @@ export class AlphaBetaAgent extends BaseAgent {
       score: searchResult.score ?? 0,
       depth: searchDepth,
       strategy: "alpha-beta",
+      pv: searchResult.pv ?? (searchResult.move !== null && searchResult.move !== undefined ? [searchResult.move] : []),
       metadata: {
         game,
         player,
         algorithm: "Alpha-Beta Pruning"
       }
     });
+  }
+
+  /**
+   * Performs read-only adversarial reasoning analysis on the provided board,
+   * returning the decision along with the principal variation (PV).
+   */
+  analyze(gameState, context = {}) {
+    return this.chooseMove(gameState, { ...context, withPV: true });
   }
 }
 

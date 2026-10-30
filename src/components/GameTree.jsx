@@ -3,7 +3,7 @@ import {
   getAvailableMoves,
   getGameStatus,
 } from "../engine/gameEngine.js";
-import "./ConnectFour.css";
+
 // Import the Alpha-Beta algorithm to find the best AI move.
 import { findBestMoveAlphaBeta } from "../engine/alphaBeta.js";
 // SECTION 2: GAME TREE COMPONENT — Receives the current board and the player whose moves are being evaluated.

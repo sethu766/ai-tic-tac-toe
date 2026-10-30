@@ -1,0 +1,342 @@
+/* AnalysisPanel.css — Adversarial Reasoning Analysis Panel styles */
+
+/* ─── Panel container ───────────────────────────────────────────── */
+.analysis-panel {
+  background: #0d1525;
+  border: 1px solid #1e2d45;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+  color: #c8d6f0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.analysis-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.analysis-panel-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #6ee7f9;
+  text-transform: uppercase;
+}
+
+.analysis-close-btn {
+  background: none;
+  border: none;
+  color: #5a6a80;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.analysis-close-btn:hover {
+  color: #c8d6f0;
+}
+
+/* ─── Disclaimer ─────────────────────────────────────────────────── */
+.analysis-disclaimer {
+  background: #111e35;
+  border-left: 3px solid #c4a4ff;
+  border-radius: 4px;
+  padding: 0.55rem 0.75rem;
+  color: #8fa0bc;
+  font-size: 0.78rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+/* ─── Move sequence (PV) ─────────────────────────────────────────── */
+.pv-section {
+  margin-bottom: 1rem;
+}
+
+.pv-heading {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #8fa0bc;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+.pv-sequence {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.pv-move-ai {
+  color: #6ee7f9;
+  font-weight: 600;
+}
+
+.pv-move-opp {
+  color: #c4a4ff;
+  font-weight: 600;
+}
+
+.pv-move-other {
+  color: #8fa0bc;
+}
+
+/* ─── Search tree candidate branches ────────────────────────────── */
+.search-tree-section {
+  margin-bottom: 1rem;
+}
+
+.search-tree-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
+.search-tree-node {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  background: #111e35;
+  border: 1px solid #1a2840;
+  font-size: 0.77rem;
+}
+
+.tree-node-best {
+  border-color: #6ee7f9;
+  background: rgba(110, 231, 249, 0.08);
+}
+
+.tree-node-suboptimal {
+  opacity: 0.85;
+}
+
+.tree-node-main {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tree-node-symbol {
+  font-weight: 700;
+  color: #6ee7f9;
+}
+
+.tree-node-arrow {
+  color: #5a6a80;
+}
+
+.tree-node-label {
+  color: #e2e8f0;
+}
+
+.tree-node-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-best {
+  background: rgba(110, 231, 249, 0.2);
+  color: #6ee7f9;
+  border: 1px solid #6ee7f9;
+}
+
+.badge-pruned {
+  background: rgba(248, 113, 113, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.tree-node-score {
+  font-size: 0.74rem;
+  color: #8fa0bc;
+}
+
+.tree-node-score strong {
+  color: #c8d6f0;
+}
+
+/* ─── Algorithm cards ────────────────────────────────────────────── */
+.analysis-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.analysis-card {
+  background: #111e35;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.analysis-card-title {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.analysis-card-title.minimax {
+  color: #6ee7f9;
+}
+
+.analysis-card-title.alphabeta {
+  color: #c4a4ff;
+}
+
+.analysis-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.18rem 0;
+  border-bottom: 1px solid #1a2840;
+  font-size: 0.78rem;
+}
+
+.analysis-metric:last-child {
+  border-bottom: none;
+}
+
+.analysis-metric span {
+  color: #8fa0bc;
+}
+
+.analysis-metric strong {
+  color: #c8d6f0;
+}
+
+.analysis-metric strong.move-ai {
+  color: #6ee7f9;
+}
+
+.analysis-metric strong.move-opp {
+  color: #c4a4ff;
+}
+
+/* ─── Comparison row ─────────────────────────────────────────────── */
+.analysis-comparison {
+  background: #111e35;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.analysis-comparison-title {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8fa0bc;
+  margin-bottom: 0.5rem;
+}
+
+.comparison-agree {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.comparison-disagree {
+  color: #f87171;
+  font-weight: 700;
+}
+
+/* ─── Mismatch warning ───────────────────────────────────────────── */
+.analysis-mismatch {
+  background: #2a1010;
+  border: 1px solid #f87171;
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 0.75rem;
+  color: #fca5a5;
+  font-size: 0.8rem;
+}
+
+.analysis-mismatch-title {
+  font-weight: 700;
+  color: #f87171;
+  margin-bottom: 0.3rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ─── Board highlight classes (TTT cells) ────────────────────────── */
+.cell-ai-predicted {
+  box-shadow: 0 0 0 3px #6ee7f9, 0 0 16px 4px rgba(110,231,249,0.35) !important;
+  z-index: 2;
+}
+
+.cell-opp-predicted {
+  box-shadow: 0 0 0 3px #c4a4ff, 0 0 16px 4px rgba(196,164,255,0.35) !important;
+  z-index: 2;
+}
+
+/* ─── Board highlight classes (Connect Four cells) ───────────────── */
+.c4-cell-ai-predicted {
+  outline: 3px solid #6ee7f9 !important;
+  outline-offset: -3px;
+  z-index: 2;
+}
+
+.c4-cell-opp-predicted {
+  outline: 3px solid #c4a4ff !important;
+  outline-offset: -3px;
+  z-index: 2;
+}
+
+/* ─── Analyze button ─────────────────────────────────────────────── */
+.btn-analyze {
+  background: linear-gradient(135deg, #1a2d4a 0%, #0d1525 100%);
+  border: 1px solid #6ee7f9;
+  color: #6ee7f9;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.04em;
+}
+
+.btn-analyze:hover:not(:disabled) {
+  background: linear-gradient(135deg, #223a5e 0%, #111e35 100%);
+  box-shadow: 0 0 12px rgba(110,231,249,0.2);
+}
+
+.btn-analyze:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── Loading spinner ────────────────────────────────────────────── */
+.analysis-loading {
+  text-align: center;
+  padding: 1rem;
+  color: #6ee7f9;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+}
+

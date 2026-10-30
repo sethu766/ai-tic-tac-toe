@@ -28,8 +28,6 @@ export function minimax(
   if (status.status === "draw") {
     return { score: 0, move: null };
   }
-  // Identify the symbol belonging to the opponent of the AI player.
-  const opponent = aiPlayer === "X" ? "O" : "X";
   // Determine whether this level should maximize or minimize the score.
   // The AI maximizes its score, while the opponent minimizes the AI's score.
   const maximizing = currentPlayer === aiPlayer;
@@ -85,5 +83,61 @@ export function findBestMove(board, aiPlayer = "O") {
     move: result.move,
     score: result.score,
     nodesSearched: stats.nodesSearched,
+  };
+}
+// SECTION 8: EXTRACT PRINCIPAL VARIATION — Walk the game tree following best moves at each ply.
+// Returns an ordered array of cell indices representing the predicted optimal line of play.
+// This is a game-theoretic prediction based on exhaustive search, NOT a guarantee of human play.
+function extractPV(board, currentPlayer, aiPlayer) {
+  const status = getGameStatus(board);
+  // Stop recursion at a terminal state (win, draw, or no moves).
+  if (status.status !== "playing") return [];
+  const moves = getAvailableMoves(board);
+  if (moves.length === 0) return [];
+
+  const maximizing = currentPlayer === aiPlayer;
+  let bestScore = maximizing ? -Infinity : Infinity;
+  let bestMove = null;
+
+  // Evaluate each legal move with a fresh minimax call to find the best.
+  for (const move of moves) {
+    const nextBoard = [...board];
+    nextBoard[move] = currentPlayer;
+    const result = minimax(
+      nextBoard,
+      currentPlayer === "X" ? "O" : "X",
+      aiPlayer,
+      1,
+      { nodesSearched: 0 }
+    );
+    if (
+      (maximizing && result.score > bestScore) ||
+      (!maximizing && result.score < bestScore)
+    ) {
+      bestScore = result.score;
+      bestMove = move;
+    }
+  }
+
+  if (bestMove === null) return [];
+  // Simulate the chosen best move and continue extracting deeper plies.
+  const nextBoard = [...board];
+  nextBoard[bestMove] = currentPlayer;
+  const nextPlayer = currentPlayer === "X" ? "O" : "X";
+  return [bestMove, ...extractPV(nextBoard, nextPlayer, aiPlayer)];
+}
+// SECTION 9: FIND BEST MOVE WITH PRINCIPAL VARIATION — Returns the optimal move along with the full
+// predicted move sequence (PV), evaluation score, and node count.
+// The PV is the optimal predicted line under exhaustive Minimax; it is NOT a guarantee of human play.
+export function findBestMoveWithPV(board, aiPlayer = "O") {
+  const stats = { nodesSearched: 0 };
+  const result = minimax(board, aiPlayer, aiPlayer, 0, stats);
+  // Build the principal variation starting from the AI's best first move.
+  const pv = extractPV(board, aiPlayer, aiPlayer);
+  return {
+    move: result.move,
+    score: result.score,
+    nodesSearched: stats.nodesSearched,
+    pv,
   };
 }

@@ -5,14 +5,14 @@ import "./App.css";
 import ConnectFour from "./components/ConnectFour";
 import { masterAgent } from "./agents/MasterAgent.js";
 import AgentMonitoringPanel from "./components/AgentMonitoringPanel.jsx";
+import AnalysisPanel from "./components/AnalysisPanel.jsx";
+
 import {
   createBoard,
   getGameStatus,
-  getAvailableMoves,
 } from "./engine/gameEngine";
 import { findBestMove } from "./engine/minimax";
 import { findBestMoveAlphaBeta } from "./engine/alphaBeta";
-import { compareAlgorithms } from "./utils/benchmark";
 // SECTION 2: INITIAL SCOREBOARD — Start the win counts for X, O, and draws at zero.
 const EMPTY_SCORES = { X: 0, O: 0, draws: 0 };
 // SECTION 3: MAIN APP COMPONENT — Coordinates the Tic-Tac-Toe game, AI modes, analytics, history, and page interface.
@@ -30,6 +30,10 @@ export default function App() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showTree, setShowTree] = useState(false);
   const [showConnectFour, setShowConnectFour] = useState(false);
+  // SECTION 3A-ANALYSIS: State for adversarial reasoning analysis panel.
+  const [analysis, setAnalysis] = useState(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 // SECTION 3B: DERIVED GAME INFORMATION — Calculate the current status and identify the AI symbol opposite the human.
   const status = getGameStatus(board);
   const ai = human === "X" ? "O" : "X";
@@ -74,6 +78,8 @@ export default function App() {
     setHistory([]);
     setShowAnalytics(false);
     setLastAgentDecision(null);
+    setAnalysis(null);
+    setShowAnalysis(false);
   }
 // SECTION 6: UNDO MOVE — Remove the latest move, or both the AI move and preceding human move in Human vs AI mode.
 function undoMove() {
@@ -96,6 +102,8 @@ function undoMove() {
   setShowAnalytics(false);
   setShowTree(false);
   setLastAgentDecision(null);
+  setAnalysis(null);
+  setShowAnalysis(false);
 }
 // SECTION 7: FINISH A MOVE — Save the new board and move history, update scores when the game ends, or pass the turn.
   function finishMove(nextBoard, player, nextTurn) {
@@ -183,6 +191,28 @@ function undoMove() {
   }
 // SECTION 12: WINNING-CELL HIGHLIGHTING — Keep the winning indexes available for the board's CSS classes.
   const winning = status.winningCombination || [];
+// SECTION 12A: ANALYSIS HIGHLIGHTS — Derive predicted-move cell indices from the latest analysis result.
+  // The AI move uses Alpha-Beta (primary algorithm). Null means no active analysis.
+  const aiPredictedCell = analysis?.alphaBeta?.move ?? null;
+  const oppPredictedCell = analysis?.alphaBeta?.opponentResponse ?? null;
+// SECTION 12B: RUN ANALYSIS — Calls masterAgent.analyzePosition() read-only; never modifies game state.
+  function runAnalysis() {
+    if (status.status !== "playing") return;
+    setIsAnalyzing(true);
+    // Use a timeout tick so the "Analyzing…" state renders before the synchronous search blocks.
+    setTimeout(() => {
+      try {
+        const result = masterAgent.analyzePosition([...board], turn, "tic-tac-toe");
+        setAnalysis(result);
+      } catch (err) {
+        console.error("Analysis failed:", err);
+        setAnalysis(null);
+      } finally {
+        setIsAnalyzing(false);
+        setShowAnalysis(true);
+      }
+    }, 10);
+  }
 // SECTION 13: PAGE RENDERING — Show the Connect Four extension when selected; otherwise render the main NEURALTAC interface.
   return showConnectFour ? (
     <ConnectFour onBack={() => setShowConnectFour(false)} />
@@ -278,6 +308,8 @@ function undoMove() {
                   cell === "X" ? "cell-x" : "",
                   cell === "O" ? "cell-o" : "",
                   winning.includes(index) ? "cell-winning" : "",
+                  aiPredictedCell === index && !cell ? "cell-ai-predicted" : "",
+                  oppPredictedCell === index && !cell ? "cell-opp-predicted" : "",
                 ].join(" ")}
                 onClick={() => playCell(index)}
                 disabled={
@@ -319,6 +351,16 @@ function undoMove() {
             >
               {showConnectFour ? "Back to NEURALTAC" : "Play Connect Four"}
             </button>
+            <button
+              className="button-secondary"
+              onClick={() => {
+                if (!showAnalysis) runAnalysis();
+                else setShowAnalysis(false);
+              }}
+              disabled={status.status !== "playing"}
+            >
+              {showAnalysis ? "Hide analysis" : "⚡ Analyze position"}
+            </button>
           </div>
 {/* SECTION 13I: SCOREBOARD — Show accumulated wins for X and O and the number of draws. */}
           <div className="scoreboard">
@@ -340,6 +382,17 @@ function undoMove() {
             currentBoard={board}
             turn={turn}
           />
+
+          {/* SECTION 13-ANALYSIS: ADVERSARIAL REASONING PANEL */}
+          {showAnalysis && (
+            <AnalysisPanel
+              analysis={analysis}
+              game="tic-tac-toe"
+              onClose={() => setShowAnalysis(false)}
+              onRunAnalysis={runAnalysis}
+              isAnalyzing={isAnalyzing}
+            />
+          )}
 
 {/* SECTION 13K: AI CONFIGURATION PANEL — Explain the Minimax baseline and Alpha-Beta optimization, then expose analysis tools. */}
           <section className="panel side-panel">

@@ -107,6 +107,7 @@ export class BaseAgent {
       score: stats.score ?? null,
       depth: stats.depth ?? null,
       strategy: stats.strategy || this.id,
+      pv: stats.pv ?? null,
       metadata: stats.metadata || {}
     };
 

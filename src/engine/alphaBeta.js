@@ -116,3 +116,58 @@ export function findBestMoveAlphaBeta(
     nodesPruned: stats.nodesPruned,
   };
 }
+// SECTION 11: EXTRACT PRINCIPAL VARIATION (Alpha-Beta) — Follows best moves using Alpha-Beta search.
+// Returns an ordered array of cell indices for the predicted optimal line of play.
+// This PV is a game-theoretic prediction under Alpha-Beta search, NOT a guarantee of human play.
+function extractPVAlphaBeta(board, currentPlayer, aiPlayer) {
+  const status = getGameStatus(board);
+  if (status.status !== "playing") return [];
+  const moves = getAvailableMoves(board);
+  if (moves.length === 0) return [];
+
+  const maximizing = currentPlayer === aiPlayer;
+  let bestScore = maximizing ? -Infinity : Infinity;
+  let bestMove = null;
+
+  for (let i = 0; i < moves.length; i++) {
+    const move = moves[i];
+    const nextBoard = [...board];
+    nextBoard[move] = currentPlayer;
+    const result = alphaBeta(
+      nextBoard,
+      currentPlayer === "X" ? "O" : "X",
+      aiPlayer,
+      1,
+      -Infinity,
+      Infinity,
+      { nodesSearched: 0, nodesPruned: 0 }
+    );
+    if (
+      (maximizing && result.score > bestScore) ||
+      (!maximizing && result.score < bestScore)
+    ) {
+      bestScore = result.score;
+      bestMove = move;
+    }
+  }
+
+  if (bestMove === null) return [];
+  const nextBoard = [...board];
+  nextBoard[bestMove] = currentPlayer;
+  const nextPlayer = currentPlayer === "X" ? "O" : "X";
+  return [bestMove, ...extractPVAlphaBeta(nextBoard, nextPlayer, aiPlayer)];
+}
+// SECTION 12: FIND BEST MOVE WITH PV (Alpha-Beta) — Returns optimal move, score, statistics, and PV.
+// The PV is the predicted optimal sequence under Alpha-Beta search; it is NOT a guarantee of human play.
+export function findBestMoveAlphaBetaWithPV(board, aiPlayer = "O") {
+  const stats = { nodesSearched: 0, nodesPruned: 0 };
+  const result = alphaBeta(board, aiPlayer, aiPlayer, 0, -Infinity, Infinity, stats);
+  const pv = extractPVAlphaBeta(board, aiPlayer, aiPlayer);
+  return {
+    move: result.move,
+    score: result.score,
+    nodesSearched: stats.nodesSearched,
+    nodesPruned: stats.nodesPruned,
+    pv,
+  };
+}

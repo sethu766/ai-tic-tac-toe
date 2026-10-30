@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import "./ConnectFour.css";
 import { masterAgent } from "../agents/MasterAgent.js";
 import AgentMonitoringPanel from "./AgentMonitoringPanel.jsx";
+import AnalysisPanel from "./AnalysisPanel.jsx";
 import {
   COLS,
   RED,
@@ -27,6 +28,10 @@ export default function ConnectFour({ onBack }) {
   const [stats, setStats] = useState(null);
   const [lastAgentDecision, setLastAgentDecision] = useState(null);
   const [thinking, setThinking] = useState(false);
+  // SECTION 2A-ANALYSIS: Adversarial reasoning analysis state
+  const [analysis, setAnalysis] = useState(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Map the selected difficulty to the search depth ply
   const depth = { Easy: 2, Medium: 4, Hard: 5 }[difficulty];
@@ -41,6 +46,9 @@ export default function ConnectFour({ onBack }) {
     setStats(null);
     setLastAgentDecision(null);
     setThinking(false);
+    setAnalysis(null);
+    setShowAnalysis(false);
+    setIsAnalyzing(false);
   }
 
   // SECTION 2C: FINISH TURN — Checks for win or draw, otherwise passes turn.
@@ -72,8 +80,30 @@ export default function ConnectFour({ onBack }) {
     setBoard(nextBoard);
     setStats(null);
     setLastAgentDecision(null);
+    setAnalysis(null);
+    setShowAnalysis(false);
     setThinking(true);
     finishTurn(nextBoard, YELLOW);
+  }
+
+  // SECTION 2D-ANALYSIS: RUN ANALYSIS — Master Agent coordinates depth-limited analysis without mutating game.
+  function runAnalysis() {
+    if (result || thinking) return;
+    setIsAnalyzing(true);
+    setTimeout(() => {
+      try {
+        const report = masterAgent.analyzePosition(board, turn, "connect-four", {
+          depth: Math.min(depth, 4),
+        });
+        setAnalysis(report);
+      } catch (err) {
+        console.error("C4 Analysis failed:", err);
+        setAnalysis(null);
+      } finally {
+        setIsAnalyzing(false);
+        setShowAnalysis(true);
+      }
+    }, 10);
   }
 
   // SECTION 2E: AI TURN EFFECT — Requests move from Master Agent when AI's turn arrives.
@@ -223,21 +253,60 @@ export default function ConnectFour({ onBack }) {
             <div className="connect-four-column-labels" aria-hidden="true">
               {Array.from({ length: COLS }, (_, col) => <span key={col}>{col + 1}</span>)}
             </div>
-            <div className="connect-four-board" role="grid" aria-label="Connect Four board">
-              {board.map((row, rowIndex) => row.map((cell, colIndex) => (
-                <button
-                  key={`${rowIndex}-${colIndex}`}
-                  className={`connect-four-cell ${cell ? `piece-${cell}` : ""}`}
-                  onClick={() => playHuman(colIndex)}
-                  disabled={
-                    mode !== "human" || turn !== RED || Boolean(result) ||
-                    thinking || cell !== EMPTY || board[0][colIndex] !== EMPTY
+            {(() => {
+              const aiPredictedCol = analysis?.alphaBeta?.move ?? null;
+              const oppPredictedCol = analysis?.alphaBeta?.opponentResponse ?? null;
+
+              let aiPredictedRow = -1;
+              if (aiPredictedCol !== null) {
+                for (let r = 5; r >= 0; r--) {
+                  if (board[r] && board[r][aiPredictedCol] === EMPTY) {
+                    aiPredictedRow = r;
+                    break;
                   }
-                  aria-label={`Row ${rowIndex + 1}, column ${colIndex + 1}${cell ? `, ${cell === RED ? "red" : "yellow"} piece` : ", empty"}`}
-                  role="gridcell"
-                />
-              )))}
-            </div>
+                }
+              }
+
+              let oppPredictedRow = -1;
+              if (oppPredictedCol !== null) {
+                for (let r = 5; r >= 0; r--) {
+                  if (oppPredictedCol === aiPredictedCol && r === aiPredictedRow) {
+                    continue;
+                  }
+                  if (board[r] && board[r][oppPredictedCol] === EMPTY) {
+                    oppPredictedRow = r;
+                    break;
+                  }
+                }
+              }
+
+              return (
+                <div className="connect-four-board" role="grid" aria-label="Connect Four board">
+                  {board.map((row, rowIndex) => row.map((cell, colIndex) => {
+                    const isAiPred = rowIndex === aiPredictedRow && colIndex === aiPredictedCol && !cell;
+                    const isOppPred = rowIndex === oppPredictedRow && colIndex === oppPredictedCol && !cell;
+                    return (
+                      <button
+                        key={`${rowIndex}-${colIndex}`}
+                        className={[
+                          "connect-four-cell",
+                          cell ? `piece-${cell}` : "",
+                          isAiPred ? "c4-cell-ai-predicted" : "",
+                          isOppPred ? "c4-cell-opp-predicted" : "",
+                        ].filter(Boolean).join(" ")}
+                        onClick={() => playHuman(colIndex)}
+                        disabled={
+                          mode !== "human" || turn !== RED || Boolean(result) ||
+                          thinking || cell !== EMPTY || board[0][colIndex] !== EMPTY
+                        }
+                        aria-label={`Row ${rowIndex + 1}, column ${colIndex + 1}${cell ? `, ${cell === RED ? "red" : "yellow"} piece` : ", empty"}`}
+                        role="gridcell"
+                      />
+                    );
+                  }))}
+                </div>
+              );
+            })()}
           </div>
 
           {/* BOARD LEGEND */}
@@ -256,6 +325,16 @@ export default function ConnectFour({ onBack }) {
               </button>
             )}
             <button className="button-secondary" onClick={() => resetGame(mode)}>Reset board</button>
+            <button
+              className="button-secondary"
+              onClick={() => {
+                if (!showAnalysis) runAnalysis();
+                else setShowAnalysis(false);
+              }}
+              disabled={Boolean(result) || thinking}
+            >
+              {showAnalysis ? "Hide analysis" : "⚡ Analyze position"}
+            </button>
           </div>
         </div>
 
@@ -273,6 +352,17 @@ export default function ConnectFour({ onBack }) {
             currentBoard={board}
             turn={turn}
           />
+
+          {/* SECTION 3-ANALYSIS: ADVERSARIAL REASONING PANEL */}
+          {showAnalysis && (
+            <AnalysisPanel
+              analysis={analysis}
+              game="connect-four"
+              onClose={() => setShowAnalysis(false)}
+              onRunAnalysis={runAnalysis}
+              isAnalyzing={isAnalyzing}
+            />
+          )}
 
           {/* DECISION ENGINE CONFIGURATION */}
           <section className="panel side-panel">
