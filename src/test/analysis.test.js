@@ -165,6 +165,17 @@ describe("analyzePosition — Tic-Tac-Toe", () => {
     expect(bestNode.label).toBe("Cell 3");
   });
 
+  it("labels evaluated non-best Tic-Tac-Toe branches as alternatives, not pruned", () => {
+    const result = analyzePosition(EMPTY_TTT, "O", "tic-tac-toe");
+
+    expect(result.alphaBeta.nodesPruned).toBeGreaterThan(0);
+    expect(
+      result.treeNodes
+        .filter((node) => !node.isBest)
+        .every((node) => node.status === "ALTERNATIVE")
+    ).toBe(true);
+  });
+
   it("MinimaxAgent.analyze returns decision object with pv property", () => {
     const agent = new MinimaxAgent();
     const decision = agent.analyze(FORCED_WIN_TTT, { game: "tic-tac-toe", player: "O" });
@@ -224,7 +235,19 @@ describe("analyzePosition — Connect Four", () => {
     const board = createC4Board();
     const result = analyzePosition(board, "Y", "connect-four", { depth: 3 });
     expect(result.alphaBeta.nodesSearched).toBeLessThan(result.minimax.nodesSearched);
+    expect(result.alphaBeta.score).toBe(result.minimax.score);
     expect(result.comparison.nodeReductionPercent).toBeGreaterThan(0);
+  });
+
+  it("labels evaluated non-best Connect Four branches as alternatives, not pruned", () => {
+    const result = analyzePosition(createC4Board(), "R", "connect-four", { depth: 3 });
+
+    expect(result.alphaBeta.nodesPruned).toBeGreaterThan(0);
+    expect(
+      result.treeNodes
+        .filter((node) => !node.isBest)
+        .every((node) => node.status === "ALTERNATIVE")
+    ).toBe(true);
   });
 });
 
@@ -311,4 +334,3 @@ describe("connectFourMinimaxWithPV — C4 minimax PV extraction", () => {
     }
   });
 });
-

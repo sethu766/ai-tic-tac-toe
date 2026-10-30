@@ -88,7 +88,7 @@ function SearchTreeSection({ treeNodes, player }) {
               <span className="tree-node-symbol">{node.player}</span>
               <span className="tree-node-arrow">↳</span>
               <strong className="tree-node-label">{node.label}</strong>
-              <span className={`tree-node-badge ${node.isBest ? "badge-best" : "badge-pruned"}`}>
+              <span className={`tree-node-badge ${node.isBest ? "badge-best" : "badge-alternative"}`}>
                 {node.status}
               </span>
             </div>
@@ -124,7 +124,7 @@ function AlgorithmCard({ title, data, game, cssClass }) {
       </div>
       {data.nodesPruned > 0 && (
         <div className="analysis-metric">
-          <span>Pruned</span>
+          <span>Pruned siblings</span>
           <strong>{fmt(data.nodesPruned)}</strong>
         </div>
       )}
@@ -185,7 +185,7 @@ function ComparisonSection({ comparison, game, minimax, alphaBeta }) {
           <strong>{fmt(alphaBeta.nodesSearched)}</strong>
         </div>
         <div className="analysis-metric">
-          <span>Pruned branches</span>
+          <span>Pruned siblings</span>
           <strong>{fmt(alphaBeta.nodesPruned)}</strong>
         </div>
       </div>
@@ -275,4 +275,3 @@ export default function AnalysisPanel({ analysis, game, onClose, onRunAnalysis, 
     </div>
   );
 }
-

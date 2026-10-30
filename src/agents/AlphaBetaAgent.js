@@ -31,7 +31,7 @@ export class AlphaBetaAgent extends BaseAgent {
     const startTime = performance.now();
     const safeBoard = this.cloneBoard(gameState);
     const game = this.detectGame(safeBoard, context);
-    const player = context.player || (game === "connect-four" ? "Y" : "O");
+    const player = context.player || (game === "connect-four" ? "R" : "O");
 
     // Prevent search if game is already terminal
     if (this.isGameOver(safeBoard, game)) {

@@ -159,10 +159,10 @@
   border: 1px solid #6ee7f9;
 }
 
-.badge-pruned {
-  background: rgba(248, 113, 113, 0.15);
-  color: #fca5a5;
-  border: 1px solid rgba(248, 113, 113, 0.3);
+.badge-alternative {
+  background: rgba(143, 160, 188, 0.12);
+  color: #8fa0bc;
+  border: 1px solid rgba(143, 160, 188, 0.25);
 }
 
 .tree-node-score {
@@ -339,4 +339,3 @@
   font-size: 0.82rem;
   letter-spacing: 0.08em;
 }
-

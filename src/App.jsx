@@ -1,6 +1,6 @@
 // SECTION 1: IMPORTS — Load the decision-tree component, React hooks, styles, game component, engine functions, algorithms, benchmark utility, and Multi-Agent Architecture.
 import GameTree from "./components/GameTree.jsx";
-import { useMemo, useState } from "react";
+import { useRef, useState } from "react";
 import "./App.css";
 import ConnectFour from "./components/ConnectFour";
 import { masterAgent } from "./agents/MasterAgent.js";
@@ -23,23 +23,33 @@ export default function App() {
   const [difficulty, setDifficulty] = useState("hard");
   const [strategy, setStrategy] = useState("auto");
   const [lastAgentDecision, setLastAgentDecision] = useState(null);
-  const [human, setHuman] = useState("X");
+  const human = "X";
   const [turn, setTurn] = useState("X");
   const [scores, setScores] = useState(EMPTY_SCORES);
   const [history, setHistory] = useState([]);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [analytics, setAnalytics] = useState(null);
   const [showTree, setShowTree] = useState(false);
   const [showConnectFour, setShowConnectFour] = useState(false);
   // SECTION 3A-ANALYSIS: State for adversarial reasoning analysis panel.
   const [analysis, setAnalysis] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const analysisRequestId = useRef(0);
 // SECTION 3B: DERIVED GAME INFORMATION — Calculate the current status and identify the AI symbol opposite the human.
   const status = getGameStatus(board);
   const ai = human === "X" ? "O" : "X";
-// SECTION 4: ALGORITHM BENCHMARKING — When analytics are visible, run Minimax and Alpha-Beta on copies of the current board and compare results.
-  const analytics = useMemo(() => {
-    if (!showAnalytics) return null;
+  function invalidateAnalysis() {
+    analysisRequestId.current += 1;
+    setIsAnalyzing(false);
+  }
+// SECTION 4: ALGORITHM BENCHMARKING — Run Minimax and Alpha-Beta on copies of the current board when requested.
+  function toggleAnalytics() {
+    if (showAnalytics) {
+      setShowAnalytics(false);
+      return;
+    }
+
     const player = turn === "X" || turn === "O" ? turn : "O";
     try {
       const startMinimax = performance.now();
@@ -50,14 +60,14 @@ export default function App() {
       const alphaBetaTime = performance.now() - startAlphaBeta;
       const minimaxNodes = minimaxResult.nodesSearched;
       const alphaBetaNodes = alphaBetaResult.nodesSearched;
-      return {
+      setAnalytics({
         minimax: {
           ...minimaxResult,
-          medianTimeMs: minimaxTime,
+          executionTimeMs: minimaxTime,
         },
         alphaBeta: {
           ...alphaBetaResult,
-          medianTimeMs: alphaBetaTime,
+          executionTimeMs: alphaBetaTime,
         },
         nodeReductionPercent:
           minimaxNodes > 0
@@ -65,18 +75,21 @@ export default function App() {
             : 0,
         sameOptimalScore: minimaxResult.score === alphaBetaResult.score,
         sameOptimalMove: minimaxResult.move === alphaBetaResult.move,
-      };
+      });
+      setShowAnalytics(true);
     } catch (error) {
       console.error("Analysis failed:", error);
-      return null;
+      setAnalytics(null);
     }
-  }, [board, turn, showAnalytics]);
+  }
 // SECTION 5: RESET GAME — Create an empty board and reset the turn, move history, analytics visibility, and agent telemetry.
   function resetGame() {
+    invalidateAnalysis();
     setBoard(createBoard());
     setTurn("X");
     setHistory([]);
     setShowAnalytics(false);
+    setAnalytics(null);
     setLastAgentDecision(null);
     setAnalysis(null);
     setShowAnalysis(false);
@@ -84,8 +97,11 @@ export default function App() {
 // SECTION 6: UNDO MOVE — Remove the latest move, or both the AI move and preceding human move in Human vs AI mode.
 function undoMove() {
   if (history.length === 0) return;
-  // In Human vs AI, undo the AI's move and the preceding human move.
-  const movesToUndo = mode === "human" ? 2 : 1;
+  invalidateAnalysis();
+  const lastMove = history[history.length - 1];
+  // Undo the AI response and human move together, unless the human ended the game.
+  const movesToUndo =
+    mode === "human" && lastMove.player === ai ? 2 : 1;
   const remainingHistory = history.slice(
     0,
     Math.max(0, history.length - movesToUndo)
@@ -99,7 +115,19 @@ function undoMove() {
   const xCount = previousBoard.filter((cell) => cell === "X").length;
   const oCount = previousBoard.filter((cell) => cell === "O").length;
   setTurn(xCount === oCount ? "X" : "O");
+  if (status.status === "won") {
+    setScores((previous) => ({
+      ...previous,
+      [status.winner]: Math.max(0, previous[status.winner] - 1),
+    }));
+  } else if (status.status === "draw") {
+    setScores((previous) => ({
+      ...previous,
+      draws: Math.max(0, previous.draws - 1),
+    }));
+  }
   setShowAnalytics(false);
+  setAnalytics(null);
   setShowTree(false);
   setLastAgentDecision(null);
   setAnalysis(null);
@@ -107,6 +135,9 @@ function undoMove() {
 }
 // SECTION 7: FINISH A MOVE — Save the new board and move history, update scores when the game ends, or pass the turn.
   function finishMove(nextBoard, player, nextTurn) {
+    invalidateAnalysis();
+    setAnalysis(null);
+    setShowAnalysis(false);
     const result = getGameStatus(nextBoard);
     setBoard(nextBoard);
     setHistory((previous) => [
@@ -124,6 +155,7 @@ function undoMove() {
       setTurn(nextTurn);
     }
     setShowAnalytics(false);
+    setAnalytics(null);
   }
 // SECTION 8: HANDLE A BOARD CLICK — Validate human move, apply it, and request coordinated AI move from Master Agent.
   function playCell(index) {
@@ -198,18 +230,22 @@ function undoMove() {
 // SECTION 12B: RUN ANALYSIS — Calls masterAgent.analyzePosition() read-only; never modifies game state.
   function runAnalysis() {
     if (status.status !== "playing") return;
+    const requestId = ++analysisRequestId.current;
     setIsAnalyzing(true);
     // Use a timeout tick so the "Analyzing…" state renders before the synchronous search blocks.
     setTimeout(() => {
+      if (requestId !== analysisRequestId.current) return;
       try {
         const result = masterAgent.analyzePosition([...board], turn, "tic-tac-toe");
-        setAnalysis(result);
+        if (requestId === analysisRequestId.current) setAnalysis(result);
       } catch (err) {
         console.error("Analysis failed:", err);
-        setAnalysis(null);
+        if (requestId === analysisRequestId.current) setAnalysis(null);
       } finally {
-        setIsAnalyzing(false);
-        setShowAnalysis(true);
+        if (requestId === analysisRequestId.current) {
+          setIsAnalyzing(false);
+          setShowAnalysis(true);
+        }
       }
     }, 10);
   }
@@ -347,7 +383,12 @@ function undoMove() {
             </button>
             <button
               className="button-secondary"
-              onClick={() => setShowConnectFour(v => !v)}
+              onClick={() => {
+                invalidateAnalysis();
+                setAnalysis(null);
+                setShowAnalysis(false);
+                setShowConnectFour(v => !v);
+              }}
             >
               {showConnectFour ? "Back to NEURALTAC" : "Play Connect Four"}
             </button>
@@ -359,7 +400,7 @@ function undoMove() {
               }}
               disabled={status.status !== "playing"}
             >
-              {showAnalysis ? "Hide analysis" : "⚡ Analyze position"}
+              {showAnalysis ? "Hide analysis" : " Analyze position"}
             </button>
           </div>
 {/* SECTION 13I: SCOREBOARD — Show accumulated wins for X and O and the number of draws. */}
@@ -414,7 +455,7 @@ function undoMove() {
             </div>
             <button
               className="button-primary full-width"
-              onClick={() => setShowAnalytics(!showAnalytics)}
+              onClick={toggleAnalytics}
             >
               {showAnalytics ? "Hide analysis" : "Analyze current position →"}
             </button>
@@ -520,12 +561,12 @@ function undoMove() {
                   <strong>{analytics.alphaBeta.nodesPruned}</strong>
                 </div>
                 <div className="metric-row">
-                  <span>Minimax median</span>
-                  <strong>{analytics.minimax.medianTimeMs.toFixed(3)} ms</strong>
+                  <span>Minimax run</span>
+                  <strong>{analytics.minimax.executionTimeMs.toFixed(3)} ms</strong>
                 </div>
                 <div className="metric-row">
-                  <span>Alpha-Beta median</span>
-                  <strong>{analytics.alphaBeta.medianTimeMs.toFixed(3)} ms</strong>
+                  <span>Alpha-Beta run</span>
+                  <strong>{analytics.alphaBeta.executionTimeMs.toFixed(3)} ms</strong>
                 </div>
                 <div className="metric-row">
                   <span>Node reduction</span>

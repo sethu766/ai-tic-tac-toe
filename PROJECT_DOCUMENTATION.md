@@ -2,21 +2,22 @@
 
 ## 1. Problem Definition
 
-Tic-Tac-Toe is a two-player, deterministic, turn-based game played on a 3 × 3 grid. The players, X and O, alternate placing their symbols in empty cells. A player wins by placing three symbols in a horizontal row, vertical column, or diagonal. If all nine cells are occupied without a winning combination, the game ends in a draw.
+NEURALTAC is a browser application for two deterministic, turn-based games. Tic-Tac-Toe uses a 3 × 3 board; Connect Four uses a 6 × 7 gravity-based board. The project demonstrates legal move handling, game-state evaluation, and adversarial decision-making through registered AI agents.
 
-The main problem addressed by NEURALTAC is the implementation and comparison of adversarial search algorithms for selecting optimal moves in Tic-Tac-Toe. The system uses Minimax and Alpha-Beta Pruning to evaluate possible game outcomes and make decisions.
+Tic-Tac-Toe uses exhaustive Minimax and Alpha-Beta search with terminal-state scores. Connect Four uses depth-limited Minimax or Alpha-Beta and a heuristic based on center control and four-cell windows. RandomAgent selects a legal action without search. MasterAgent coordinates the agents and validates their returned moves.
 
 ## 2. Motivation
 
-The project demonstrates how artificial intelligence can make decisions in competitive environments. Tic-Tac-Toe provides a simple environment for studying adversarial search because its state space is finite and its rules are clearly defined.
+The project demonstrates how agents make decisions in competitive environments. Tic-Tac-Toe provides a compact environment for exhaustive search, while Connect Four demonstrates gravity, heuristic evaluation, and depth-limited search.
 
 NEURALTAC also investigates the efficiency of search algorithms by comparing the number of nodes explored and the execution time of Minimax and Alpha-Beta Pruning. This provides a practical demonstration of how pruning can reduce unnecessary search while preserving the optimal minimax score.
 
 ## 3. Project Objectives
 
-- Implement an AI opponent for Tic-Tac-Toe.
+- Implement Tic-Tac-Toe and Connect Four game environments.
 - Apply the Minimax algorithm to adversarial decision-making.
 - Implement Alpha-Beta Pruning to reduce unnecessary search.
+- Coordinate Random, Minimax, and Alpha-Beta agents through MasterAgent.
 - Support Human vs AI and AI vs AI game modes.
 - Provide Easy, Medium, and Hard difficulty levels.
 - Display game history, scores, and search analytics.
@@ -38,16 +39,11 @@ The AI agent aims to:
 
 ### 4.2 Environment
 
-The environment consists of:
-- A 3 × 3 Tic-Tac-Toe board.
-- Two players, X and O.
-- Empty, occupied, and terminal board states.
-- The rules for winning, losing, drawing, and alternating turns.
-- A browser-based interface through which the game is played.
+The primary PEAS example is Tic-Tac-Toe: a 3 × 3 board with X and O, legal empty cells, alternating turns, and win/draw terminal states. The project also supports Connect Four, using a 6 × 7 board, red/yellow pieces, gravity-constrained column actions, and four-in-a-row terminal states.
 
 ### 4.3 Actuators
 
-The AI agent acts by:
+In Tic-Tac-Toe, the AI agent acts by:
 - Selecting an empty cell.
 - Placing its assigned symbol, X or O, in that cell.
 - Updating the game state through the selected move.
@@ -67,12 +63,12 @@ This information is used to evaluate possible future states and select a move.
 
 ## 5. Scope
 
-NEURALTAC focuses on adversarial search in the Tic-Tac-Toe environment. Its main algorithms are Minimax and Alpha-Beta Pruning. The performance experiment compares these algorithms on a selected sample of reachable board positions.
+NEURALTAC implements two playable games and three agent strategies. Tic-Tac-Toe supports exhaustive search; Connect Four supports depth-limited search (Easy/Medium/Hard map to 2/4/5 plies for Alpha-Beta by default). In Tic-Tac-Toe, Easy selects Random and Medium chooses Random or Alpha-Beta with equal probability. Explicit strategy selection can override either game's default policy.
 
-The benchmark currently covers 10 selected positions out of 4,520 identified reachable ongoing positions. Therefore, the reported average performance improvement applies to the tested sample and should not be interpreted as a measurement across all positions.
+The benchmark covers 10 selected Tic-Tac-Toe positions out of 4,520 identified reachable ongoing positions. Its reported average performance applies only to this sample. Connect Four Undo is not implemented; use Reset board to restart.
 ## 6. State-Space Representation
 
-The state space represents all possible configurations of the Tic-Tac-Toe board that can be reached by following the game rules.
+The following representation describes Tic-Tac-Toe. Connect Four uses a 6 × 7 matrix and only permits a move in a non-full column, where the piece drops to the lowest empty row.
 
 ### 6.1 Initial State
 
@@ -206,18 +202,20 @@ ALPHA_BETA(state, alpha, beta, maximizingPlayer):
 
 ## 9. Evaluation Function
 
-The evaluation function assigns values to terminal outcomes. The project checklist specifies:
+Tic-Tac-Toe evaluates terminal outcomes:
 
 - **+100:** Win for the maximizing player.
 - **−100:** Win for the minimizing player.
 - **0:** Draw.
 
-The exact terminal scoring and whether the implementation includes an additional heuristic for non-terminal states must match the actual source code.
+The search depth adjusts win/loss scores to prefer quicker wins and delayed losses. Connect Four additionally evaluates non-terminal positions using center-column control and weighted four-cell windows. See `src/engine/connectFourEngine.js` for the heuristic.
 
 ## 10. Algorithm Comparison
 
 Minimax examines the search tree without pruning. Alpha-Beta Pruning avoids exploring branches that cannot affect the minimax score.
 
-Both algorithms should return the same optimal minimax score for the same valid state and player, while Alpha-Beta Pruning can evaluate fewer nodes depending on move ordering and the current board.
+Both algorithms return the same minimax score when given equivalent search settings. Alpha-Beta may evaluate fewer positions depending on move ordering and the current board.
 
 The NEURALTAC experiment measured this behavior on 10 selected reachable ongoing positions. The measured average node reduction was 58.44%, with 100% minimax score agreement across those positions.
+
+The telemetry field labelled **pruned siblings** counts only the immediate sibling moves skipped at each Alpha-Beta cutoff. It is not the number of all descendant nodes that would have been searched beneath those moves. Minimax reports zero because it does not prune.

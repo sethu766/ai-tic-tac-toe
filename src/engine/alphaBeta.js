@@ -108,7 +108,7 @@ export function findBestMoveAlphaBeta(
     Infinity,
     stats
   );
-  // Return the selected move, its evaluation score, and the search statistics.
+  // nodesPruned counts sibling moves skipped at cutoffs, not their descendant nodes.
   return {
     move: result.move,
     score: result.score,

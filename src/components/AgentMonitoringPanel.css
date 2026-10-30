@@ -35,7 +35,8 @@
   letter-spacing: 1px;
 }
 
-.agent-status-badge.coordinating {
+.agent-status-badge.coordinating,
+.agent-status-badge.ready {
   background: #14352c;
   color: #6ee7a8;
   border: 1px solid #6ee7a844;
@@ -45,6 +46,12 @@
   background: #1b263b;
   color: #8293ae;
   border: 1px solid #303c55;
+}
+
+.agent-status-badge.error {
+  background: #3a1c24;
+  color: #ff9a9a;
+  border: 1px solid #ff7a7a66;
 }
 
 .agent-strategy-select-row {
@@ -247,4 +254,3 @@
   line-height: 1.5;
   margin: 8px 0 0;
 }
-

@@ -168,12 +168,7 @@ function analyzeTicTacToe(board, player, masterAgent = null) {
       branchScore = -oppEval.score;
     }
     const isBest = move === abResult.move;
-    let branchState = "SUBOPTIMAL";
-    if (isBest) {
-      branchState = "OPTIMAL (PV)";
-    } else if (abResult.nodesPruned > 0) {
-      branchState = "PRUNED / CUTOFF";
-    }
+    const branchState = isBest ? "OPTIMAL (PV)" : "ALTERNATIVE";
 
     return {
       move,
@@ -333,12 +328,7 @@ function analyzeConnectFour(board, player, options = {}, masterAgent = null) {
     }
 
     const isBest = col === abResult.move;
-    let branchState = "SUBOPTIMAL";
-    if (isBest) {
-      branchState = "OPTIMAL (PV)";
-    } else if (abResult.pruned > 0) {
-      branchState = "PRUNED / CUTOFF";
-    }
+    const branchState = isBest ? "OPTIMAL (PV)" : "ALTERNATIVE";
 
     return {
       move: col,

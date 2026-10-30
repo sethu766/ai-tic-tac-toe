@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { BaseAgent } from "../agents/BaseAgent.js";
 import { RandomAgent } from "../agents/RandomAgent.js";
 import { MinimaxAgent } from "../agents/MinimaxAgent.js";
@@ -57,6 +57,7 @@ describe("Multi-Agent Architecture & Master Agent", () => {
         const decision = randomAgent.chooseMove(board, { game: "tic-tac-toe" });
         expect(legal).toContain(decision.move);
         expect(board[decision.move]).toBeNull();
+        expect(decision.nodesSearched).toBe(0);
       }
     });
 
@@ -137,6 +138,21 @@ describe("Multi-Agent Architecture & Master Agent", () => {
       expect(decision.nodesPruned).toBe(0);
     });
 
+    it("defaults Connect Four decisions to Red, the starting player", () => {
+      const board = createC4Board();
+      const minimaxDecision = minimaxAgent.chooseMove(board, {
+        game: "connect-four",
+        depth: 2
+      });
+      const alphaBetaDecision = alphaBetaAgent.chooseMove(board, {
+        game: "connect-four",
+        depth: 2
+      });
+
+      expect(minimaxDecision.metadata.player).toBe("R");
+      expect(alphaBetaDecision.metadata.player).toBe("R");
+    });
+
     it("returns null move on terminal game states", () => {
       const wonBoard = [
         "X", "X", "X",
@@ -204,6 +220,31 @@ describe("Multi-Agent Architecture & Master Agent", () => {
       expect(getC4Moves(board)).toContain(shallow.move);
       expect(getC4Moves(board)).toContain(deep.move);
     });
+
+    it("wins immediately and blocks an immediate Connect Four threat", () => {
+      const winningBoard = createC4Board();
+      winningBoard[5][0] = "R";
+      winningBoard[5][1] = "R";
+      winningBoard[5][2] = "R";
+      const winningDecision = alphaBetaAgent.chooseMove(winningBoard, {
+        game: "connect-four",
+        player: "R",
+        depth: 2
+      });
+
+      const blockingBoard = createC4Board();
+      blockingBoard[5][0] = "Y";
+      blockingBoard[5][1] = "Y";
+      blockingBoard[5][2] = "Y";
+      const blockingDecision = alphaBetaAgent.chooseMove(blockingBoard, {
+        game: "connect-four",
+        player: "R",
+        depth: 2
+      });
+
+      expect(winningDecision.move).toBe(3);
+      expect(blockingDecision.move).toBe(3);
+    });
   });
 
   describe("MasterAgent coordination & responsibilities", () => {
@@ -260,6 +301,30 @@ describe("Multi-Agent Architecture & Master Agent", () => {
         strategy: "minimax"
       });
       expect(minimaxDecision.agentId).toBe("minimax");
+
+      const alphaBetaDecision = master.chooseMove(board, {
+        game: "tic-tac-toe",
+        strategy: "alpha-beta"
+      });
+      expect(alphaBetaDecision.agentId).toBe("alpha-beta");
+
+      const randomDecision = master.chooseMove(board, {
+        game: "tic-tac-toe",
+        strategy: "random"
+      });
+      expect(randomDecision.agentId).toBe("random");
+    });
+
+    it("selects Random and Alpha-Beta with a 50/50 Medium policy", () => {
+      const randomSpy = vi.spyOn(Math, "random");
+      try {
+        randomSpy.mockReturnValueOnce(0.49);
+        expect(master.resolveAgentId("tic-tac-toe", "medium")).toBe("random");
+        randomSpy.mockReturnValueOnce(0.5);
+        expect(master.resolveAgentId("tic-tac-toe", "medium")).toBe("alpha-beta");
+      } finally {
+        randomSpy.mockRestore();
+      }
     });
 
     it("delegates to the selected agent and validates legal moves", () => {
@@ -313,6 +378,10 @@ describe("Multi-Agent Architecture & Master Agent", () => {
       expect(decision.fallbackApplied).toBe(true);
       expect(decision.fallbackReason).toContain("Search calculation failed");
       expect(getTttMoves(board)).toContain(decision.move);
+      expect(decision.agentId).toBe("master-fallback");
+      expect(decision.agentName).toBe("Master Agent fallback");
+      expect(decision.nodesSearched).toBe(0);
+      expect(decision.score).toBeNull();
     });
 
     it("safely rejects and corrects illegal moves returned by a rogue agent", () => {
@@ -341,6 +410,8 @@ describe("Multi-Agent Architecture & Master Agent", () => {
       expect(decision.fallbackApplied).toBe(true);
       expect(decision.move).not.toBe(0);
       expect(getTttMoves(board)).toContain(decision.move);
+      expect(decision.agentId).toBe("master-fallback");
+      expect(decision.nodesSearched).toBe(0);
     });
 
     it("prevents moves after the game has ended (terminal states)", () => {
@@ -371,6 +442,17 @@ describe("Multi-Agent Architecture & Master Agent", () => {
       expect(decision.game).toBe("connect-four");
       expect(getC4Moves(board)).toContain(decision.move);
       expect(decision.nodesSearched).toBeGreaterThan(0);
+    });
+
+    it("defaults Connect Four decisions to Red when no player is provided", () => {
+      const decision = master.chooseMove(createC4Board(), {
+        game: "connect-four",
+        difficulty: "easy"
+      });
+
+      expect(decision.player).toBe("R");
+      expect(decision.agentId).toBe("alpha-beta");
+      expect(getC4Moves(createC4Board())).toContain(decision.move);
     });
 
     it("tracks decision telemetry in history and lastDecision", () => {

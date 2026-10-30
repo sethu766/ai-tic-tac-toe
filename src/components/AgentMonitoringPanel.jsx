@@ -20,18 +20,49 @@ export default function AgentMonitoringPanel({
   currentBoard = null,
   turn = "X"
 }) {
-  const [comparisonResult, setComparisonResult] = useState(null);
+  const [comparisonSnapshot, setComparisonSnapshot] = useState(null);
   const [isComparing, setIsComparing] = useState(false);
+  const comparisonResult =
+    comparisonSnapshot &&
+    comparisonSnapshot.board === currentBoard &&
+    comparisonSnapshot.turn === turn &&
+    comparisonSnapshot.game === game &&
+    comparisonSnapshot.difficulty === difficulty &&
+    comparisonSnapshot.depth === depth
+      ? comparisonSnapshot.result
+      : null;
 
-  // Derive active agent display data
-  const agentId = lastDecision?.agentId || (selectedStrategy !== "auto" ? selectedStrategy : "alpha-beta");
+  // Show the policy choice until a move provides evidence of the agent used.
+  const normalizedDifficulty = difficulty.toLowerCase();
+  let policyAgentId = selectedStrategy !== "auto" ? selectedStrategy : null;
+  if (policyAgentId === null) {
+    if (game === "connect-four" || normalizedDifficulty === "hard") {
+      policyAgentId = "alpha-beta";
+    } else if (normalizedDifficulty === "easy") {
+      policyAgentId = "random";
+    }
+  }
+  const agentId = lastDecision?.agentId || policyAgentId || "policy";
   const agentName = lastDecision?.agentName || (
     agentId === "minimax"
       ? "Minimax Agent"
       : agentId === "random"
         ? "Random Agent"
-        : "Alpha-Beta Agent"
+        : agentId === "policy"
+          ? "Policy-selected agent"
+          : "Alpha-Beta Agent"
   );
+  const isMasterFallback = agentId === "master-fallback";
+  const isPolicyPending = agentId === "policy";
+  const coordinatorStatus = masterAgent?.status || "unknown";
+  const statusLabels = {
+    coordinating: "● ACTIVE · COORDINATING",
+    ready: "● READY",
+    idle: "● IDLE",
+    error: "● ERROR",
+    unknown: "● STATUS UNKNOWN",
+  };
+  const statusLabel = statusLabels[coordinatorStatus] || statusLabels.unknown;
 
   const strategyLabel = lastDecision?.strategy
     ? lastDecision.strategy.toUpperCase()
@@ -40,12 +71,31 @@ export default function AgentMonitoringPanel({
       : `${difficulty.toUpperCase()} (POLICY)`;
 
   const roleExplanation = lastDecision?.roleExplanation || (
-    agentId === "minimax"
-      ? "Performs exhaustive adversarial minimax search exploring all candidate branches to identify game-theoretically optimal moves."
-      : agentId === "random"
-        ? "Selects uniformly at random among available legal moves without searching future game states."
-        : "Optimizes minimax search by pruning provably suboptimal branches where alpha >= beta, achieving the same optimal decision in significantly fewer nodes."
+    isPolicyPending
+      ? "The Medium policy selects Random or Alpha-Beta with equal probability when the next move is requested."
+      : agentId === "minimax"
+        ? "Performs exhaustive adversarial minimax search exploring all candidate branches to identify game-theoretically optimal moves."
+        : agentId === "random"
+          ? "Selects uniformly at random among available legal moves without searching future game states."
+          : "Optimizes minimax search by pruning provably suboptimal branches where alpha >= beta, achieving the same optimal decision in significantly fewer nodes."
   );
+
+  const agentIconClass = isMasterFallback
+    ? "fallback"
+    : isPolicyPending
+      ? "policy"
+      : agentId === "minimax"
+        ? "minimax"
+        : agentId === "random"
+          ? "random"
+          : "alphabeta";
+  const agentIcon = isMasterFallback || agentId === "minimax"
+    ? "M"
+    : isPolicyPending
+      ? "?"
+      : agentId === "random"
+        ? "R"
+        : "αβ";
 
   // Format move display
   let moveLabel = "Waiting for move…";
@@ -70,7 +120,14 @@ export default function AgentMonitoringPanel({
         player: turn,
         depth: depth || (game === "connect-four" ? 4 : 9)
       });
-      setComparisonResult(result);
+      setComparisonSnapshot({
+        result,
+        board: currentBoard,
+        turn,
+        game,
+        difficulty,
+        depth
+      });
     } catch (err) {
       console.error("Agent comparison error:", err);
     } finally {
@@ -86,8 +143,12 @@ export default function AgentMonitoringPanel({
           <div className="section-kicker">02 / MULTI-AGENT ARCHITECTURE</div>
           <h3>Master Agent Monitor</h3>
         </div>
-        <span className="agent-status-badge coordinating">
-          ● ACTIVE · COORDINATING
+        <span
+          className={`agent-status-badge ${coordinatorStatus}`}
+          role="status"
+          aria-label={`Master Agent ${statusLabel.replace("● ", "")}`}
+        >
+          {statusLabel}
         </span>
       </div>
 
@@ -111,15 +172,9 @@ export default function AgentMonitoringPanel({
       {/* ACTIVE AGENT CARD */}
       <div className="agent-active-card">
         <span
-          className={`agent-card-icon ${
-            agentId === "minimax"
-              ? "minimax"
-              : agentId === "random"
-                ? "random"
-                : "alphabeta"
-          }`}
+          className={`agent-card-icon ${agentIconClass}`}
         >
-          {agentId === "minimax" ? "M" : agentId === "random" ? "R" : "αβ"}
+          {agentIcon}
         </span>
         <div className="agent-card-details">
           <div className="agent-card-top">
@@ -156,7 +211,11 @@ export default function AgentMonitoringPanel({
           </strong>
         </div>
         <div className="agent-metric-item">
-          <span>PRUNED BRANCHES</span>
+          <span
+            title="Counts only sibling moves skipped at each cutoff, not every node beneath those moves."
+          >
+            PRUNED SIBLINGS
+          </span>
           <strong className={lastDecision?.nodesPruned != null ? "lavender" : "muted-na"}>
             {lastDecision?.nodesPruned != null && agentId === "alpha-beta"
               ? lastDecision.nodesPruned.toLocaleString()
@@ -203,7 +262,7 @@ export default function AgentMonitoringPanel({
                   <th>Agent</th>
                   <th>Move</th>
                   <th>Nodes</th>
-                  <th>Pruned</th>
+                  <th>Pruned siblings</th>
                   <th>Score</th>
                   <th>Time</th>
                 </tr>
@@ -254,4 +313,3 @@ export default function AgentMonitoringPanel({
     </section>
   );
 }
-

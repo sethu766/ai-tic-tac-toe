@@ -61,7 +61,7 @@ export class RandomAgent extends BaseAgent {
 
     return this.formatDecision(selectedMove, {
       executionTimeMs: elapsed,
-      nodesSearched: 1, // Single sample evaluation
+      nodesSearched: 0,
       nodesPruned: 0,
       score: null, // Random agent does not evaluate board states
       depth: 0,

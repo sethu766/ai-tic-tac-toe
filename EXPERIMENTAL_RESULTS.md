@@ -16,6 +16,8 @@ The experiment recorded:
 - Percentage reduction in nodes searched with Alpha-Beta Pruning.
 - Agreement between the algorithms' minimax scores.
 
+The Alpha-Beta `nodesPruned` telemetry counts the immediately remaining sibling moves skipped at a cutoff. It does not count every descendant position that each skipped move could have generated. In the UI this metric is labelled **Pruned siblings**.
+
 Execution times were measured using seven benchmark samples, with 25 searches per sample. The median time per search was used for comparison.
 
 ## 3. Experimental Results
@@ -32,7 +34,7 @@ For the initial empty board:
 
 ## 4. Analysis
 
-Alpha-Beta Pruning reduces the search space by eliminating branches that cannot affect the final minimax decision. This can substantially reduce the number of nodes evaluated while preserving the minimax score.
+Alpha-Beta Pruning reduces the search space by eliminating branches that cannot affect the final minimax decision. The node-reduction calculation compares positions actually visited by each search; the separate sibling counter is not a count of all omitted descendants. This can substantially reduce the number of evaluated positions while preserving the minimax score.
 
 The initial empty board showed a particularly large reduction in searched nodes. The reduction varied across the tested positions because the effectiveness of pruning depends on the current board state and the opportunities for alpha-beta cutoffs.
 

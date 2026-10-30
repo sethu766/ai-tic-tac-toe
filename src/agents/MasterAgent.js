@@ -189,7 +189,7 @@ export class MasterAgent {
       : [...gameState];
 
     const game = this.detectGame(safeBoard, context);
-    const player = context.player || (game === "connect-four" ? "Y" : "O");
+    const player = context.player || (game === "connect-four" ? "R" : "O");
     const difficulty = (context.difficulty || "hard").toLowerCase();
     const explicitStrategy = context.strategy || null;
 
@@ -282,6 +282,7 @@ export class MasterAgent {
     }
 
     // 5. Validate decision
+    let decisionAgent = agent;
     let chosenMove = rawDecision ? rawDecision.move : null;
     const isMoveLegal = chosenMove !== null && chosenMove !== undefined && legalMoves.includes(chosenMove);
 
@@ -290,6 +291,7 @@ export class MasterAgent {
       fallbackReason = fallbackReason || `Agent returned illegal move [${chosenMove}]. Fallback engaged.`;
       // Safe fallback to first legal move
       chosenMove = legalMoves[0];
+      decisionAgent = null;
     }
 
     const totalTime = performance.now() - startTime;
@@ -297,19 +299,23 @@ export class MasterAgent {
 
     const finalDecision = {
       move: chosenMove,
-      agentId: agent ? agent.id : selectedAgentId,
-      agentName: agent ? agent.name : "Fallback Agent",
-      strategy: rawDecision?.strategy || difficulty,
+      agentId: decisionAgent ? decisionAgent.id : "master-fallback",
+      agentName: decisionAgent ? decisionAgent.name : "Master Agent fallback",
+      strategy: decisionAgent ? rawDecision?.strategy || difficulty : "legal-fallback",
       game,
       player,
       difficulty,
-      depth: rawDecision?.depth ?? (game === "connect-four" ? context.depth || 4 : 9),
+      depth: decisionAgent
+        ? rawDecision?.depth ?? (game === "connect-four" ? context.depth || 4 : 9)
+        : null,
       executionTimeMs: Number(totalTime.toFixed(3)),
-      nodesSearched: rawDecision?.nodesSearched ?? 1,
-      nodesPruned: rawDecision?.nodesPruned ?? 0,
-      score: rawDecision?.score ?? null,
-      pv: rawDecision?.pv ?? null,
-      roleExplanation: agent ? agent.description : "Coordinated emergency fallback move.",
+      nodesSearched: decisionAgent ? rawDecision?.nodesSearched ?? null : 0,
+      nodesPruned: decisionAgent ? rawDecision?.nodesPruned ?? null : 0,
+      score: decisionAgent ? rawDecision?.score ?? null : null,
+      pv: decisionAgent ? rawDecision?.pv ?? null : null,
+      roleExplanation: decisionAgent
+        ? decisionAgent.description
+        : "The selected agent did not return a legal move; the Master Agent applied the first available legal move.",
       fallbackApplied,
       fallbackReason,
       legalMoves,
@@ -336,7 +342,7 @@ export class MasterAgent {
       : [...gameState];
 
     const game = this.detectGame(safeBoard, context);
-    const player = context.player || (game === "connect-four" ? "Y" : "O");
+    const player = context.player || (game === "connect-four" ? "R" : "O");
     const results = {};
 
     for (const id of agentIds) {

@@ -1,9 +1,9 @@
 # NEURALTAC
-## An Intelligent Tic-Tac-Toe System Using Minimax and Alpha-Beta Pruning
+## An Intelligent Game System Using Minimax and Alpha-Beta Pruning
 
 ### Abstract
 
-NEURALTAC is a browser-based Tic-Tac-Toe application developed to demonstrate adversarial search and artificial intelligence decision-making. It implements Minimax and Alpha-Beta Pruning to select moves and provides Human vs AI and AI vs AI game modes. The system includes difficulty selection, score tracking, move history, game-tree exploration, and performance analytics.
+NEURALTAC is a browser-based Tic-Tac-Toe and Connect Four application developed to demonstrate agent coordination, adversarial search, and AI decision-making. MasterAgent delegates decisions to Random, Minimax, or Alpha-Beta agents. Tic-Tac-Toe uses exhaustive search; Connect Four uses depth-limited search and a board heuristic. Connect Four does not currently support Undo; its Reset board control starts a fresh game.
 
 A benchmark experiment compared both algorithms on 10 selected reachable ongoing board positions. The recorded results showed 100% minimax score agreement and an average node reduction of 58.44% for the tested sample. The project demonstrates how pruning can reduce search effort while preserving the minimax decision value.
 
@@ -11,16 +11,18 @@ A benchmark experiment compared both algorithms on 10 selected reachable ongoing
 
 Artificial intelligence enables systems to select actions by evaluating possible outcomes. Board games provide a useful environment for studying intelligent decision-making because they have defined rules, states, and actions.
 
-NEURALTAC uses Tic-Tac-Toe to demonstrate adversarial search. It provides an interactive game and a performance laboratory for comparing two search algorithms.
+NEURALTAC uses Tic-Tac-Toe to demonstrate exhaustive adversarial search and Connect Four to demonstrate depth-limited search with heuristic evaluation. Its performance laboratory compares Minimax and Alpha-Beta.
 
 ### 2. Problem Statement
 
-The objective is to develop an intelligent Tic-Tac-Toe system that chooses appropriate moves, supports interactive gameplay, and demonstrates the difference between unpruned Minimax search and Alpha-Beta Pruning.
+The objective is to develop an interactive system for two games that coordinates agents, chooses legal moves, and demonstrates unpruned Minimax search and Alpha-Beta Pruning.
 
 ### 3. Objectives
 
 - Implement Minimax for adversarial decision-making.
 - Implement Alpha-Beta Pruning to reduce unnecessary search.
+- Coordinate Random, Minimax, and Alpha-Beta agents through MasterAgent.
+- Support a depth-limited Connect Four extension with heuristic evaluation.
 - Provide Human vs AI and AI vs AI modes.
 - Support Easy, Medium, and Hard difficulty settings.
 - Display scores, move history, and game-state information.
@@ -54,6 +56,8 @@ Minimax explores possible future game states. The maximizing player attempts to 
 
 Alpha-Beta Pruning improves Minimax by skipping branches that cannot change the final minimax decision. Alpha represents the best value found for the maximizing player, and beta represents the best value found for the minimizing player. Pruning occurs when alpha is greater than or equal to beta.
 
+Telemetry labelled **pruned siblings** counts only the immediate sibling moves skipped at each cutoff. It does not count every descendant position those skipped moves could have produced.
+
 #### 6.3 Terminal Evaluation
 
 The implementation uses depth-sensitive terminal scores:
@@ -66,6 +70,7 @@ This scoring rewards earlier wins and delays losses.
 ### 7. Implementation
 
 The application provides:
+- Tic-Tac-Toe and Connect Four.
 - Human vs AI gameplay.
 - AI vs AI gameplay.
 - Easy, Medium, and Hard difficulty settings.
@@ -77,9 +82,9 @@ The application provides:
 
 ### 8. Testing
 
-The automated test suite completed with 14 passing tests. The tests cover winning moves, blocking moves, legal-move selection, draw detection, board immutability, occupied-cell validation, and agreement between the two algorithms across reachable game states.
+The current automated suite was run with `npm.cmd test`: 81 tests passed across 4 test files, including six React UI tests for Tic-Tac-Toe Undo/score restoration, reset, selected policy, stale analysis, Connect Four stale analysis/reset, and coordinator status. Other tests cover search and game states, agent registration and policies, legal-move validation, telemetry, analysis/PV generation, Connect Four tactical search, and Minimax/Alpha-Beta agreement.
 
-Manual testing also confirmed the main game modes, difficulty levels, restart control, scoreboard, and history. Undo was subsequently connected to the interface and tested manually.
+Browser checks verified Tic-Tac-Toe Easy, Medium, and Hard policy selection, explicit Minimax use in both games, Connect Four Alpha-Beta gameplay, reset/undo behavior, and live benchmark timing labels. Direct engine assertions covered Connect Four board shape, gravity, win directions, full-board draw detection, and full-column legality. These checks do not constitute exhaustive manual testing of every endgame or UI state.
 
 ### 9. Experimental Results
 
@@ -102,7 +107,7 @@ The graphs are stored in `public/research-graphs/`. The complete benchmark data 
 
 The benchmark evaluated 10 selected positions rather than every reachable ongoing position. Consequently, the average node reduction is specific to the tested sample. Execution times can vary with system load and runtime conditions.
 
-The current evaluation is terminal-state based; a separate non-terminal heuristic has not been established in the documented implementation. Further testing and broader sampling would improve the strength of the performance evaluation.
+Tic-Tac-Toe uses terminal-state scoring. Connect Four has a non-terminal heuristic based on center-column control and four-cell windows. The benchmark evaluated a selected sample rather than all reachable states. Further testing and broader sampling would improve the performance evaluation.
 
 ### 11. Future Enhancements
 
@@ -110,7 +115,7 @@ The current evaluation is terminal-state based; a separate non-terminal heuristi
 - Add repeatable performance tests across separate runs.
 - Improve analytics and exportable reports.
 - Extend the game-tree visualization.
-- Add additional automated tests for UI controls and difficulty settings.
+- Expand automated UI tests to cover more Connect Four controls and endgame states.
 
 ### 12. Conclusion
 

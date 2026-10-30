@@ -1,5 +1,5 @@
 // SECTION 1: IMPORTS — React hooks, styles, Master Agent, Agent Monitoring Panel, and Connect Four engine.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./ConnectFour.css";
 import { masterAgent } from "../agents/MasterAgent.js";
 import AgentMonitoringPanel from "./AgentMonitoringPanel.jsx";
@@ -32,12 +32,21 @@ export default function ConnectFour({ onBack }) {
   const [analysis, setAnalysis] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const analysisRequestId = useRef(0);
 
   // Map the selected difficulty to the search depth ply
   const depth = { Easy: 2, Medium: 4, Hard: 5 }[difficulty];
+  const activeAgentId = strategy === "auto" ? "alpha-beta" : strategy;
+  const usesSearch = activeAgentId !== "random" && activeAgentId !== "master-fallback";
+
+  function invalidateAnalysis() {
+    analysisRequestId.current += 1;
+    setIsAnalyzing(false);
+  }
 
   // SECTION 2B: RESET GAME — Starts a fresh match and resets state and search telemetry.
   function resetGame(nextMode = mode) {
+    invalidateAnalysis();
     setBoard(createBoard());
     setMode(nextMode);
     setTurn(RED);
@@ -53,6 +62,9 @@ export default function ConnectFour({ onBack }) {
 
   // SECTION 2C: FINISH TURN — Checks for win or draw, otherwise passes turn.
   function finishTurn(nextBoard, nextPlayer) {
+    invalidateAnalysis();
+    setAnalysis(null);
+    setShowAnalysis(false);
     const status = getGameStatus(nextBoard);
     if (status.status === "won") {
       setResult(status.winner);
@@ -89,22 +101,30 @@ export default function ConnectFour({ onBack }) {
   // SECTION 2D-ANALYSIS: RUN ANALYSIS — Master Agent coordinates depth-limited analysis without mutating game.
   function runAnalysis() {
     if (result || thinking) return;
+    const requestId = ++analysisRequestId.current;
     setIsAnalyzing(true);
     setTimeout(() => {
+      if (requestId !== analysisRequestId.current) return;
       try {
         const report = masterAgent.analyzePosition(board, turn, "connect-four", {
           depth: Math.min(depth, 4),
         });
-        setAnalysis(report);
+        if (requestId === analysisRequestId.current) setAnalysis(report);
       } catch (err) {
         console.error("C4 Analysis failed:", err);
-        setAnalysis(null);
+        if (requestId === analysisRequestId.current) setAnalysis(null);
       } finally {
-        setIsAnalyzing(false);
-        setShowAnalysis(true);
+        if (requestId === analysisRequestId.current) {
+          setIsAnalyzing(false);
+          setShowAnalysis(true);
+        }
       }
     }, 10);
   }
+
+  useEffect(() => () => {
+    analysisRequestId.current += 1;
+  }, []);
 
   // SECTION 2E: AI TURN EFFECT — Requests move from Master Agent when AI's turn arrives.
   useEffect(() => {
@@ -333,9 +353,12 @@ export default function ConnectFour({ onBack }) {
               }}
               disabled={Boolean(result) || thinking}
             >
-              {showAnalysis ? "Hide analysis" : "⚡ Analyze position"}
+              {showAnalysis ? "Hide analysis" : " Analyze position"}
             </button>
           </div>
+          <p className="connect-four-undo-note" role="note">
+            Undo is not available in Connect Four. Use Reset board to start over.
+          </p>
         </div>
 
         {/* SIDE PANELS */}
@@ -372,16 +395,20 @@ export default function ConnectFour({ onBack }) {
             <div className="algorithm-card">
               <span className="algorithm-icon">αβ</span>
               <div><strong>Alpha-Beta Pruning</strong><small>Prunes non-optimal search subtrees</small></div>
-              <span className="algorithm-tag accent-text">ACTIVE</span>
+              <span className="algorithm-tag accent-text">
+                {activeAgentId === "alpha-beta"
+                  ? strategy === "auto" ? "POLICY" : "SELECTED"
+                  : "AVAILABLE"}
+              </span>
             </div>
             <div className="algorithm-card">
               <span className="algorithm-icon accent">4×</span>
               <div><strong>Heuristic evaluation</strong><small>Scores center control and 4-cell patterns</small></div>
-              <span className="algorithm-tag">SEARCH</span>
+              <span className="algorithm-tag">{usesSearch ? "SEARCH" : "NOT USED"}</span>
             </div>
             <div className="connect-four-depth">
               <span>Current search depth</span>
-              <strong>{depth} ply</strong>
+              <strong>{usesSearch ? `${depth} ply` : "N/A"}</strong>
             </div>
           </section>
 

@@ -80,6 +80,7 @@
   border-radius: 10px; background: #0c1220; color: #98a5be; font-size: 11px;
 }
 .connect-four-depth strong { color: #6ee7f9; font: 600 13px 'DM Mono', monospace; }
+.connect-four-undo-note { margin-top: 10px; color: #8293ae; font-size: 10px; line-height: 1.6; }
 .connect-four-stat-intro { color: #98a5be; font-size: 12px; }
 .connect-four-stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
 .connect-four-stat-grid .research-metric { padding: 13px; }
