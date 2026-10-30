@@ -64,13 +64,13 @@ export class MinimaxAgent extends BaseAgent {
       // Connect Four uses depth-limited search
       searchDepth = context.depth != null ? context.depth : 4;
       searchResult = context.withPV
-        ? connectFourMinimaxWithPV(safeBoard, searchDepth, player, player)
-        : connectFourMinimax(safeBoard, searchDepth, player, player);
+        ? connectFourMinimaxWithPV(safeBoard, searchDepth, player, player, context.random)
+        : connectFourMinimax(safeBoard, searchDepth, player, player, context.random);
     } else {
       // Tic-Tac-Toe full tree minimax search
       searchResult = context.withPV
-        ? findBestMoveWithPV(safeBoard, player)
-        : findBestMoveTtt(safeBoard, player);
+        ? findBestMoveWithPV(safeBoard, player, context.random)
+        : findBestMoveTtt(safeBoard, player, context.random);
       searchDepth = 9; // Max depth of 3x3 game
     }
 

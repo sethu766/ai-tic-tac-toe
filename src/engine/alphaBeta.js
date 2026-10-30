@@ -3,6 +3,7 @@ import {
   getGameStatus,
   getAvailableMoves,
 } from "./gameEngine.js";
+import { chooseRandomMove } from "./searchUtils.js";
 // SECTION 2: ALPHA-BETA ALGORITHM — Recursively searches possible moves to find the best move for the AI.
 export function alphaBeta(
   board,
@@ -11,7 +12,8 @@ export function alphaBeta(
   depth = 0,
   alpha = -Infinity,
   beta = Infinity,
-  stats = { nodesSearched: 0, nodesPruned: 0 }
+  stats = { nodesSearched: 0, nodesPruned: 0 },
+  random = Math.random
 ) {
   // Count the current board position as a searched node.
   stats.nodesSearched++;
@@ -39,6 +41,7 @@ export function alphaBeta(
   let bestScore = maximizing ? -Infinity : Infinity;
   // Store the move that produces the best score found so far.
   let bestMove = null;
+  const bestMoves = [];
   // SECTION 5: GENERATE LEGAL MOVES — Retrieve all moves available on the current board.
   const moves = getAvailableMoves(board);
   // Examine each legal move one by one.
@@ -55,9 +58,10 @@ export function alphaBeta(
       nextPlayer,
       aiPlayer,
       depth + 1,
-      alpha,
-      beta,
-      stats
+      depth === 0 ? -Infinity : alpha,
+      depth === 0 ? Infinity : beta,
+      stats,
+      random
     );
     // Update the best score and move if this candidate improves the result.
     if (
@@ -66,6 +70,10 @@ export function alphaBeta(
     ) {
       bestScore = result.score;
       bestMove = move;
+      if (depth === 0) bestMoves.length = 0;
+      if (depth === 0) bestMoves.push(move);
+    } else if (depth === 0 && result.score === bestScore) {
+      bestMoves.push(move);
     }
     // SECTION 7: UPDATE ALPHA AND BETA — Track score bounds to identify unnecessary branches.
     // Alpha is the best score found for the maximizing player so far.
@@ -82,6 +90,9 @@ export function alphaBeta(
       break;
     }
   }
+  if (depth === 0 && bestMoves.length > 1) {
+    bestMove = chooseRandomMove(bestMoves, random);
+  }
   // SECTION 9: RETURN SEARCH RESULT — Return the best score and move found for this position.
   return {
     score: bestScore,
@@ -91,7 +102,8 @@ export function alphaBeta(
 // SECTION 10: FIND BEST AI MOVE — Public wrapper that starts the search and returns its result and statistics.
 export function findBestMoveAlphaBeta(
   board,
-  aiPlayer = "O"
+  aiPlayer = "O",
+  random = Math.random
 ) {
   // Initialize counters for searched and pruned nodes for this search.
   const stats = {
@@ -106,7 +118,8 @@ export function findBestMoveAlphaBeta(
     0,
     -Infinity,
     Infinity,
-    stats
+    stats,
+    random
   );
   // nodesPruned counts sibling moves skipped at cutoffs, not their descendant nodes.
   return {
@@ -159,10 +172,15 @@ function extractPVAlphaBeta(board, currentPlayer, aiPlayer) {
 }
 // SECTION 12: FIND BEST MOVE WITH PV (Alpha-Beta) — Returns optimal move, score, statistics, and PV.
 // The PV is the predicted optimal sequence under Alpha-Beta search; it is NOT a guarantee of human play.
-export function findBestMoveAlphaBetaWithPV(board, aiPlayer = "O") {
+export function findBestMoveAlphaBetaWithPV(board, aiPlayer = "O", random = Math.random) {
   const stats = { nodesSearched: 0, nodesPruned: 0 };
-  const result = alphaBeta(board, aiPlayer, aiPlayer, 0, -Infinity, Infinity, stats);
-  const pv = extractPVAlphaBeta(board, aiPlayer, aiPlayer);
+  const result = alphaBeta(board, aiPlayer, aiPlayer, 0, -Infinity, Infinity, stats, random);
+  const nextBoard = [...board];
+  if (result.move !== null) nextBoard[result.move] = aiPlayer;
+  const nextPlayer = aiPlayer === "X" ? "O" : "X";
+  const pv = result.move === null
+    ? []
+    : [result.move, ...extractPVAlphaBeta(nextBoard, nextPlayer, aiPlayer)];
   return {
     move: result.move,
     score: result.score,

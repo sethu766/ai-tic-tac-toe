@@ -15,6 +15,13 @@ import { findBestMove } from "./engine/minimax";
 import { findBestMoveAlphaBeta } from "./engine/alphaBeta";
 // SECTION 2: INITIAL SCOREBOARD — Start the win counts for X, O, and draws at zero.
 const EMPTY_SCORES = { X: 0, O: 0, draws: 0 };
+const EMPTY_AI_MATCH_STATS = {
+  games: 0,
+  wins: { X: 0, O: 0 },
+  draws: 0,
+  startingPlayers: { X: 0, O: 0 },
+  totalMoves: 0,
+};
 // SECTION 3: MAIN APP COMPONENT — Coordinates the Tic-Tac-Toe game, AI modes, analytics, history, and page interface.
 export default function App() {
 // SECTION 3A: APPLICATION STATE — Store the board, mode, difficulty, human symbol, turn, scores, history, and panel visibility.
@@ -22,10 +29,15 @@ export default function App() {
   const [mode, setMode] = useState("human");
   const [difficulty, setDifficulty] = useState("hard");
   const [strategy, setStrategy] = useState("auto");
+  const [aiStrategies, setAIStrategies] = useState({ X: "auto", O: "auto" });
   const [lastAgentDecision, setLastAgentDecision] = useState(null);
   const human = "X";
   const [turn, setTurn] = useState("X");
+  const [gameStarter, setGameStarter] = useState("X");
+  const [starterPolicy, setStarterPolicy] = useState("alternate");
+  const nextAIStarter = useRef("X");
   const [scores, setScores] = useState(EMPTY_SCORES);
+  const [aiMatchStats, setAIMatchStats] = useState(EMPTY_AI_MATCH_STATS);
   const [history, setHistory] = useState([]);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [analytics, setAnalytics] = useState(null);
@@ -83,10 +95,17 @@ export default function App() {
     }
   }
 // SECTION 5: RESET GAME — Create an empty board and reset the turn, move history, analytics visibility, and agent telemetry.
-  function resetGame() {
+  function resetGame(nextMode = mode, nextStarterPolicy = starterPolicy) {
     invalidateAnalysis();
+    const starter = nextMode === "ai"
+      ? nextStarterPolicy === "alternate" ? nextAIStarter.current : nextStarterPolicy
+      : "X";
+    if (nextMode === "ai" && nextStarterPolicy === "alternate") {
+      nextAIStarter.current = starter === "X" ? "O" : "X";
+    }
     setBoard(createBoard());
-    setTurn("X");
+    setTurn(starter);
+    setGameStarter(starter);
     setHistory([]);
     setShowAnalytics(false);
     setAnalytics(null);
@@ -110,11 +129,12 @@ function undoMove() {
     remainingHistory.length > 0
       ? [...remainingHistory[remainingHistory.length - 1].board]
       : createBoard();
+  const nextTurn = remainingHistory.length === 0
+    ? gameStarter
+    : remainingHistory[remainingHistory.length - 1].player === "X" ? "O" : "X";
   setHistory(remainingHistory);
   setBoard(previousBoard);
-  const xCount = previousBoard.filter((cell) => cell === "X").length;
-  const oCount = previousBoard.filter((cell) => cell === "O").length;
-  setTurn(xCount === oCount ? "X" : "O");
+  setTurn(nextTurn);
   if (status.status === "won") {
     setScores((previous) => ({
       ...previous,
@@ -124,6 +144,22 @@ function undoMove() {
     setScores((previous) => ({
       ...previous,
       draws: Math.max(0, previous.draws - 1),
+    }));
+  }
+  if (mode === "ai" && status.status !== "playing") {
+    const moveCount = board.filter((cell) => cell !== null).length;
+    setAIMatchStats((previous) => ({
+      ...previous,
+      games: Math.max(0, previous.games - 1),
+      wins: status.status === "won"
+        ? { ...previous.wins, [status.winner]: Math.max(0, previous.wins[status.winner] - 1) }
+        : previous.wins,
+      draws: status.status === "draw" ? Math.max(0, previous.draws - 1) : previous.draws,
+      startingPlayers: {
+        ...previous.startingPlayers,
+        [gameStarter]: Math.max(0, previous.startingPlayers[gameStarter] - 1),
+      },
+      totalMoves: Math.max(0, previous.totalMoves - moveCount),
     }));
   }
   setShowAnalytics(false);
@@ -151,6 +187,22 @@ function undoMove() {
           ? { draws: previous.draws + 1 }
           : { [result.winner]: previous[result.winner] + 1 }),
       }));
+      if (mode === "ai") {
+        const moveCount = nextBoard.filter((cell) => cell !== null).length;
+        setAIMatchStats((previous) => ({
+          ...previous,
+          games: previous.games + 1,
+          wins: result.status === "won"
+            ? { ...previous.wins, [result.winner]: previous.wins[result.winner] + 1 }
+            : previous.wins,
+          draws: previous.draws + (result.status === "draw" ? 1 : 0),
+          startingPlayers: {
+            ...previous.startingPlayers,
+            [gameStarter]: previous.startingPlayers[gameStarter] + 1,
+          },
+          totalMoves: previous.totalMoves + moveCount,
+        }));
+      }
     } else {
       setTurn(nextTurn);
     }
@@ -196,7 +248,7 @@ function undoMove() {
       game: "tic-tac-toe",
       player: turn,
       difficulty,
-      strategy: strategy !== "auto" ? strategy : null
+      strategy: aiStrategies[turn] !== "auto" ? aiStrategies[turn] : null
     });
     setLastAgentDecision(decision);
     if (decision && decision.move !== null && decision.move !== undefined) {
@@ -212,7 +264,7 @@ function undoMove() {
       game: "tic-tac-toe",
       player: turn,
       difficulty,
-      strategy: strategy !== "auto" ? strategy : null
+      strategy: aiStrategies[turn] !== "auto" ? aiStrategies[turn] : null
     });
     setLastAgentDecision(decision);
     if (decision && decision.move !== null) {
@@ -292,7 +344,7 @@ function undoMove() {
               GAME MODE
               <select value={mode} onChange={(e) => {
                 setMode(e.target.value);
-                resetGame();
+                resetGame(e.target.value);
               }}>
                 <option value="human">Human vs AI</option>
                 <option value="ai">AI vs AI</option>
@@ -310,6 +362,44 @@ function undoMove() {
               </select>
             </label>
           </div>
+          {mode === "ai" && (
+            <div className="control-row ai-strategy-controls">
+              {["X", "O"].map((player) => (
+                <label key={player}>
+                  {player} AI STRATEGY
+                  <select
+                    aria-label={`${player} AI strategy`}
+                    value={aiStrategies[player]}
+                    onChange={(event) => setAIStrategies((previous) => ({
+                      ...previous,
+                      [player]: event.target.value,
+                    }))}
+                  >
+                    <option value="auto">Auto (difficulty policy)</option>
+                    <option value="minimax">Minimax</option>
+                    <option value="alpha-beta">Alpha-Beta</option>
+                    <option value="random">Random</option>
+                  </select>
+                </label>
+              ))}
+              <label>
+                AI FIRST PLAYER
+                <select
+                  aria-label="AI first player policy"
+                  value={starterPolicy}
+                  onChange={(event) => {
+                    const policy = event.target.value;
+                    setStarterPolicy(policy);
+                    resetGame("ai", policy);
+                  }}
+                >
+                  <option value="alternate">Alternate each game</option>
+                  <option value="X">X starts every game</option>
+                  <option value="O">O starts every game</option>
+                </select>
+              </label>
+            </div>
+          )}
 {/* SECTION 13F: TURN BANNER — Display the winning player, draw, current turn, or AI-thinking state. */}
           <div className="turn-banner">
             <span className={`turn-symbol ${turn === "X" ? "symbol-x" : "symbol-o"}`}>
@@ -363,7 +453,7 @@ function undoMove() {
           </div>
 {/* SECTION 13H: GAME ACTIONS — Provide new-round, AI-step, auto-play, reset, undo, and Connect Four controls. */}
           <div className="game-actions">
-            <button className="button-primary" onClick={mode === "ai" ? stepAI : resetGame}>
+            <button className="button-primary" onClick={mode === "ai" ? stepAI : () => resetGame()}>
               {mode === "ai" ? "Advance AI move →" : "↻ New round"}
             </button>
             {mode === "ai" && (
@@ -371,7 +461,7 @@ function undoMove() {
                 Auto next move
               </button>
             )}
-            <button className="button-secondary" onClick={resetGame}>
+            <button className="button-secondary" onClick={() => resetGame()}>
               Reset board
             </button>
             <button
@@ -409,6 +499,31 @@ function undoMove() {
             <div><span className="score-o">O</span><strong>{scores.O}</strong><small>WINS</small></div>
             <div><span className="score-draw">=</span><strong>{scores.draws}</strong><small>DRAWS</small></div>
           </div>
+          {mode === "ai" && (
+            <section className="ai-match-statistics" aria-label="AI vs AI match statistics">
+              <div className="ai-match-statistics-heading">
+                <h3>AI vs AI match statistics</h3>
+                <button
+                  className="button-secondary"
+                  onClick={() => setAIMatchStats({
+                    ...EMPTY_AI_MATCH_STATS,
+                    wins: { ...EMPTY_AI_MATCH_STATS.wins },
+                    startingPlayers: { ...EMPTY_AI_MATCH_STATS.startingPlayers },
+                  })}
+                >
+                  Reset statistics
+                </button>
+              </div>
+              <div className="ai-match-statistics-grid">
+                <div><span>Games played</span><strong>{aiMatchStats.games}</strong></div>
+                <div><span>X wins</span><strong>{aiMatchStats.wins.X} ({aiMatchStats.games ? (aiMatchStats.wins.X / aiMatchStats.games * 100).toFixed(1) : "0.0"}%)</strong></div>
+                <div><span>O wins</span><strong>{aiMatchStats.wins.O} ({aiMatchStats.games ? (aiMatchStats.wins.O / aiMatchStats.games * 100).toFixed(1) : "0.0"}%)</strong></div>
+                <div><span>Draws</span><strong>{aiMatchStats.draws} ({aiMatchStats.games ? (aiMatchStats.draws / aiMatchStats.games * 100).toFixed(1) : "0.0"}%)</strong></div>
+                <div><span>Started by X / O</span><strong>{aiMatchStats.startingPlayers.X} / {aiMatchStats.startingPlayers.O}</strong></div>
+                <div><span>Average game length</span><strong>{aiMatchStats.games ? (aiMatchStats.totalMoves / aiMatchStats.games).toFixed(1) : "0.0"} moves</strong></div>
+              </div>
+            </section>
+          )}
         </div>
 {/* SECTION 13J: SIDE PANELS — Present Agent Monitoring Panel, AI configuration, benchmark analytics, the decision tree, and move history. */}
         <aside className="side-column">
@@ -417,8 +532,8 @@ function undoMove() {
             game="tic-tac-toe"
             masterAgent={masterAgent}
             lastDecision={lastAgentDecision}
-            selectedStrategy={strategy}
-            onStrategyChange={setStrategy}
+            selectedStrategy={mode === "ai" ? aiStrategies[turn] : strategy}
+            onStrategyChange={mode === "human" ? setStrategy : undefined}
             difficulty={difficulty}
             currentBoard={board}
             turn={turn}

@@ -1,5 +1,5 @@
 // SECTION 1: IMPORTS — React hooks, styles, Master Agent, Agent Monitoring Panel, and Connect Four engine.
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./ConnectFour.css";
 import { masterAgent } from "../agents/MasterAgent.js";
 import AgentMonitoringPanel from "./AgentMonitoringPanel.jsx";
@@ -21,9 +21,20 @@ export default function ConnectFour({ onBack }) {
   const [board, setBoard] = useState(createBoard);
   const [mode, setMode] = useState("human");
   const [turn, setTurn] = useState(RED);
+  const [startingPlayer, setStartingPlayer] = useState(RED);
+  const [starterPolicy, setStarterPolicy] = useState("alternate");
+  const nextAIStarter = useRef(RED);
   const [difficulty, setDifficulty] = useState("Medium");
   const [strategy, setStrategy] = useState("auto");
+  const [agentStrategies, setAgentStrategies] = useState({ R: "auto", Y: "auto" });
   const [result, setResult] = useState(null);
+  const [aiMatchStats, setAIMatchStats] = useState({
+    games: 0,
+    wins: { R: 0, Y: 0 },
+    draws: 0,
+    startingPlayers: { R: 0, Y: 0 },
+    totalMoves: 0,
+  });
   const [paused, setPaused] = useState(false);
   const [stats, setStats] = useState(null);
   const [lastAgentDecision, setLastAgentDecision] = useState(null);
@@ -36,7 +47,8 @@ export default function ConnectFour({ onBack }) {
 
   // Map the selected difficulty to the search depth ply
   const depth = { Easy: 2, Medium: 4, Hard: 5 }[difficulty];
-  const activeAgentId = strategy === "auto" ? "alpha-beta" : strategy;
+  const activeStrategy = mode === "ai" ? agentStrategies[turn] : strategy;
+  const activeAgentId = activeStrategy === "auto" ? "alpha-beta" : activeStrategy;
   const usesSearch = activeAgentId !== "random" && activeAgentId !== "master-fallback";
 
   function invalidateAnalysis() {
@@ -45,11 +57,18 @@ export default function ConnectFour({ onBack }) {
   }
 
   // SECTION 2B: RESET GAME — Starts a fresh match and resets state and search telemetry.
-  function resetGame(nextMode = mode) {
+  function resetGame(nextMode = mode, nextStarterPolicy = starterPolicy) {
     invalidateAnalysis();
+    const starter = nextMode === "ai"
+      ? nextStarterPolicy === "alternate" ? nextAIStarter.current : nextStarterPolicy
+      : RED;
+    if (nextMode === "ai" && nextStarterPolicy === "alternate") {
+      nextAIStarter.current = starter === RED ? YELLOW : RED;
+    }
     setBoard(createBoard());
     setMode(nextMode);
-    setTurn(RED);
+    setTurn(starter);
+    setStartingPlayer(starter);
     setResult(null);
     setPaused(false);
     setStats(null);
@@ -61,24 +80,49 @@ export default function ConnectFour({ onBack }) {
   }
 
   // SECTION 2C: FINISH TURN — Checks for win or draw, otherwise passes turn.
-  function finishTurn(nextBoard, nextPlayer) {
-    invalidateAnalysis();
+  const finishTurn = useCallback((nextBoard, nextPlayer) => {
+    analysisRequestId.current += 1;
+    setIsAnalyzing(false);
     setAnalysis(null);
     setShowAnalysis(false);
     const status = getGameStatus(nextBoard);
     if (status.status === "won") {
       setResult(status.winner);
+      if (mode === "ai") {
+        setAIMatchStats((previous) => ({
+          ...previous,
+          games: previous.games + 1,
+          wins: { ...previous.wins, [status.winner]: previous.wins[status.winner] + 1 },
+          startingPlayers: {
+            ...previous.startingPlayers,
+            [startingPlayer]: previous.startingPlayers[startingPlayer] + 1,
+          },
+          totalMoves: previous.totalMoves + nextBoard.flat().filter((cell) => cell !== EMPTY).length,
+        }));
+      }
       setThinking(false);
       return;
     }
     if (status.status === "draw") {
       setResult("DRAW");
+      if (mode === "ai") {
+        setAIMatchStats((previous) => ({
+          ...previous,
+          games: previous.games + 1,
+          draws: previous.draws + 1,
+          startingPlayers: {
+            ...previous.startingPlayers,
+            [startingPlayer]: previous.startingPlayers[startingPlayer] + 1,
+          },
+          totalMoves: previous.totalMoves + nextBoard.flat().filter((cell) => cell !== EMPTY).length,
+        }));
+      }
       setThinking(false);
       return;
     }
     setTurn(nextPlayer);
     setThinking(false);
-  }
+  }, [mode, startingPlayer]);
 
   // SECTION 2D: HUMAN MOVE — Validates selected column, places Red piece, and triggers AI turn.
   function playHuman(col) {
@@ -145,7 +189,9 @@ export default function ConnectFour({ onBack }) {
         player,
         difficulty,
         depth,
-        strategy: strategy !== "auto" ? strategy : null
+        strategy: mode === "ai"
+          ? agentStrategies[player] !== "auto" ? agentStrategies[player] : null
+          : strategy !== "auto" ? strategy : null
       });
 
       if (cancelled) return;
@@ -181,7 +227,7 @@ export default function ConnectFour({ onBack }) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [board, turn, mode, depth, difficulty, strategy, result, paused]);
+  }, [board, turn, mode, depth, difficulty, strategy, agentStrategies, result, paused, finishTurn]);
 
   // SECTION 2F: STATUS MESSAGE — Status string for turn banner.
   const status = result
@@ -256,6 +302,44 @@ export default function ConnectFour({ onBack }) {
               </select>
             </label>
           </div>
+          {mode === "ai" && (
+            <div className="control-row ai-strategy-controls">
+              {[[RED, "Red"], [YELLOW, "Yellow"]].map(([player, label]) => (
+                <label key={player}>
+                  {label.toUpperCase()} AI STRATEGY
+                  <select
+                    aria-label={`${label} AI strategy`}
+                    value={agentStrategies[player]}
+                    onChange={(event) => setAgentStrategies((previous) => ({
+                      ...previous,
+                      [player]: event.target.value,
+                    }))}
+                  >
+                    <option value="auto">Auto (difficulty policy)</option>
+                    <option value="minimax">Minimax</option>
+                    <option value="alpha-beta">Alpha-Beta</option>
+                    <option value="random">Random</option>
+                  </select>
+                </label>
+              ))}
+              <label>
+                AI FIRST PLAYER
+                <select
+                  aria-label="AI first player policy"
+                  value={starterPolicy}
+                  onChange={(event) => {
+                    const policy = event.target.value;
+                    setStarterPolicy(policy);
+                    resetGame("ai", policy);
+                  }}
+                >
+                  <option value="alternate">Alternate each game</option>
+                  <option value={RED}>Red starts every game</option>
+                  <option value={YELLOW}>Yellow starts every game</option>
+                </select>
+              </label>
+            </div>
+          )}
 
           {/* TURN BANNER */}
           <div className="turn-banner">
@@ -368,8 +452,8 @@ export default function ConnectFour({ onBack }) {
             game="connect-four"
             masterAgent={masterAgent}
             lastDecision={lastAgentDecision}
-            selectedStrategy={strategy}
-            onStrategyChange={setStrategy}
+            selectedStrategy={activeStrategy}
+            onStrategyChange={mode === "human" ? setStrategy : undefined}
             difficulty={difficulty}
             depth={depth}
             currentBoard={board}
@@ -397,7 +481,7 @@ export default function ConnectFour({ onBack }) {
               <div><strong>Alpha-Beta Pruning</strong><small>Prunes non-optimal search subtrees</small></div>
               <span className="algorithm-tag accent-text">
                 {activeAgentId === "alpha-beta"
-                  ? strategy === "auto" ? "POLICY" : "SELECTED"
+                  ? activeStrategy === "auto" ? "POLICY" : "SELECTED"
                   : "AVAILABLE"}
               </span>
             </div>
@@ -438,6 +522,37 @@ export default function ConnectFour({ onBack }) {
               </div>
             )}
           </section>
+
+          {mode === "ai" && (
+            <section className="panel side-panel ai-match-statistics" aria-label="AI vs AI match statistics">
+              <div className="ai-match-statistics-heading">
+                <div>
+                  <div className="section-kicker">05 / MATCH RECORD</div>
+                  <h2>AI vs AI statistics</h2>
+                </div>
+                <button
+                  className="button-secondary"
+                  onClick={() => setAIMatchStats({
+                    games: 0,
+                    wins: { R: 0, Y: 0 },
+                    draws: 0,
+                    startingPlayers: { R: 0, Y: 0 },
+                    totalMoves: 0,
+                  })}
+                >
+                  Reset statistics
+                </button>
+              </div>
+              <div className="ai-match-statistics-grid">
+                <div><span>Games played</span><strong>{aiMatchStats.games}</strong></div>
+                <div><span>Red wins</span><strong>{aiMatchStats.wins.R} ({aiMatchStats.games ? (aiMatchStats.wins.R / aiMatchStats.games * 100).toFixed(1) : "0.0"}%)</strong></div>
+                <div><span>Yellow wins</span><strong>{aiMatchStats.wins.Y} ({aiMatchStats.games ? (aiMatchStats.wins.Y / aiMatchStats.games * 100).toFixed(1) : "0.0"}%)</strong></div>
+                <div><span>Draws</span><strong>{aiMatchStats.draws} ({aiMatchStats.games ? (aiMatchStats.draws / aiMatchStats.games * 100).toFixed(1) : "0.0"}%)</strong></div>
+                <div><span>Started by Red / Yellow</span><strong>{aiMatchStats.startingPlayers.R} / {aiMatchStats.startingPlayers.Y}</strong></div>
+                <div><span>Average game length</span><strong>{aiMatchStats.games ? (aiMatchStats.totalMoves / aiMatchStats.games).toFixed(1) : "0.0"} moves</strong></div>
+              </div>
+            </section>
+          )}
 
           {/* STRATEGY OVERVIEW */}
           <section className="panel side-panel">

@@ -1,3 +1,5 @@
+import { chooseRandomMove } from "./searchUtils.js";
+
 /**
  * Connect Four Engine & Adversarial Search Algorithms
  *
@@ -113,11 +115,12 @@ export function scoreWindow(window, player) {
 
   if (own === 4) return 100;
   if (other === 4) return -100;
-  if (own === 3 && empty === 1) return 30;
+  if (own === 3 && empty === 1) return 40;
   if (own === 2 && empty === 2) return 10;
   if (own === 1 && empty === 3) return 1;
   if (other === 3 && empty === 1) return -40;
   if (other === 2 && empty === 2) return -10;
+  if (other === 1 && empty === 3) return -1;
   return 0;
 }
 
@@ -174,7 +177,9 @@ export function connectFourAlphaBeta(
   alpha = -Infinity,
   beta = Infinity,
   currentPlayer,
-  aiPlayer
+  aiPlayer,
+  random = Math.random,
+  rootDepth = depth
 ) {
   const winner = getWinner(board);
   const moves = getValidMoves(board);
@@ -191,7 +196,8 @@ export function connectFourAlphaBeta(
 
   const maximizing = currentPlayer === aiPlayer;
   let bestScore = maximizing ? -Infinity : Infinity;
-  let bestMove = moves[0];
+  let bestMove = null;
+  const bestMoves = [];
   let nodes = 1;
   let pruned = 0;
 
@@ -203,10 +209,12 @@ export function connectFourAlphaBeta(
     const result = connectFourAlphaBeta(
       nextBoard,
       depth - 1,
-      alpha,
-      beta,
+      depth === rootDepth ? -Infinity : alpha,
+      depth === rootDepth ? Infinity : beta,
       nextPlayer,
-      aiPlayer
+      aiPlayer,
+      random,
+      rootDepth
     );
 
     nodes += result.nodes;
@@ -218,6 +226,10 @@ export function connectFourAlphaBeta(
     ) {
       bestScore = result.score;
       bestMove = col;
+      if (depth === rootDepth) bestMoves.length = 0;
+      if (depth === rootDepth) bestMoves.push(col);
+    } else if (depth === rootDepth && result.score === bestScore) {
+      bestMoves.push(col);
     }
 
     if (maximizing) {
@@ -226,12 +238,15 @@ export function connectFourAlphaBeta(
       beta = Math.min(beta, bestScore);
     }
 
-    if (alpha >= beta) {
+    if (alpha >= beta && depth !== rootDepth) {
       pruned += moves.length - i - 1;
       break;
     }
   }
 
+  if (depth === rootDepth && bestMoves.length > 1) {
+    bestMove = chooseRandomMove(bestMoves, random);
+  }
   return { score: bestScore, move: bestMove, nodes, pruned };
 }
 
@@ -243,7 +258,9 @@ export function connectFourMinimax(
   board,
   depth,
   currentPlayer,
-  aiPlayer
+  aiPlayer,
+  random = Math.random,
+  rootDepth = depth
 ) {
   const winner = getWinner(board);
   const moves = getValidMoves(board);
@@ -259,7 +276,8 @@ export function connectFourMinimax(
 
   const maximizing = currentPlayer === aiPlayer;
   let bestScore = maximizing ? -Infinity : Infinity;
-  let bestMove = moves[0];
+  let bestMove = null;
+  const bestMoves = [];
   let nodes = 1;
 
   for (let i = 0; i < moves.length; i++) {
@@ -271,7 +289,9 @@ export function connectFourMinimax(
       nextBoard,
       depth - 1,
       nextPlayer,
-      aiPlayer
+      aiPlayer,
+      random,
+      rootDepth
     );
 
     nodes += result.nodes;
@@ -282,9 +302,16 @@ export function connectFourMinimax(
     ) {
       bestScore = result.score;
       bestMove = col;
+      if (depth === rootDepth) bestMoves.length = 0;
+      if (depth === rootDepth) bestMoves.push(col);
+    } else if (depth === rootDepth && result.score === bestScore) {
+      bestMoves.push(col);
     }
   }
 
+  if (depth === rootDepth && bestMoves.length > 1) {
+    bestMove = chooseRandomMove(bestMoves, random);
+  }
   return { score: bestScore, move: bestMove, nodes, pruned: 0 };
 }
 
@@ -385,9 +412,13 @@ function extractPVC4Minimax(board, depth, currentPlayer, aiPlayer) {
  * @param {string} aiPlayer The AI's player symbol
  * @returns {{ score, move, nodes, pruned, pv }}
  */
-export function connectFourAlphaBetaWithPV(board, depth, currentPlayer, aiPlayer) {
-  const result = connectFourAlphaBeta(board, depth, -Infinity, Infinity, currentPlayer, aiPlayer);
-  const pv = extractPVC4AlphaBeta(board, depth, currentPlayer, aiPlayer);
+export function connectFourAlphaBetaWithPV(board, depth, currentPlayer, aiPlayer, random = Math.random) {
+  const result = connectFourAlphaBeta(board, depth, -Infinity, Infinity, currentPlayer, aiPlayer, random);
+  const nextBoard = result.move === null ? null : dropPiece(board, result.move, currentPlayer);
+  const nextPlayer = currentPlayer === RED ? YELLOW : RED;
+  const pv = result.move === null
+    ? []
+    : [result.move, ...extractPVC4AlphaBeta(nextBoard, depth - 1, nextPlayer, aiPlayer)];
   return {
     score: result.score,
     move: result.move,
@@ -408,9 +439,13 @@ export function connectFourAlphaBetaWithPV(board, depth, currentPlayer, aiPlayer
  * @param {string} aiPlayer The AI's player symbol
  * @returns {{ score, move, nodes, pv }}
  */
-export function connectFourMinimaxWithPV(board, depth, currentPlayer, aiPlayer) {
-  const result = connectFourMinimax(board, depth, currentPlayer, aiPlayer);
-  const pv = extractPVC4Minimax(board, depth, currentPlayer, aiPlayer);
+export function connectFourMinimaxWithPV(board, depth, currentPlayer, aiPlayer, random = Math.random) {
+  const result = connectFourMinimax(board, depth, currentPlayer, aiPlayer, random);
+  const nextBoard = result.move === null ? null : dropPiece(board, result.move, currentPlayer);
+  const nextPlayer = currentPlayer === RED ? YELLOW : RED;
+  const pv = result.move === null
+    ? []
+    : [result.move, ...extractPVC4Minimax(nextBoard, depth - 1, nextPlayer, aiPlayer)];
   return {
     score: result.score,
     move: result.move,

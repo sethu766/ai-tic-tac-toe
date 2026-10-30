@@ -72,20 +72,21 @@ export class AlphaBetaAgent extends BaseAgent {
       }
 
       searchResult = context.withPV
-        ? connectFourAlphaBetaWithPV(safeBoard, searchDepth, player, player)
+        ? connectFourAlphaBetaWithPV(safeBoard, searchDepth, player, player, context.random)
         : connectFourAlphaBeta(
             safeBoard,
             searchDepth,
             -Infinity,
             Infinity,
             player,
-            player
+            player,
+            context.random
           );
     } else {
       // Tic-Tac-Toe full tree alpha-beta search
       searchResult = context.withPV
-        ? findBestMoveAlphaBetaWithPV(safeBoard, player)
-        : findBestMoveAlphaBetaTtt(safeBoard, player);
+        ? findBestMoveAlphaBetaWithPV(safeBoard, player, context.random)
+        : findBestMoveAlphaBetaTtt(safeBoard, player, context.random);
       searchDepth = 9;
     }
 

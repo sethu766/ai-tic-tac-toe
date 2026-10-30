@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import App from "../App.jsx";
 import ConnectFour from "../components/ConnectFour.jsx";
 import AgentMonitoringPanel from "../components/AgentMonitoringPanel.jsx";
@@ -76,6 +76,64 @@ describe("React game UI", () => {
     expect(screen.getByText("NODES VISITED").parentElement.textContent).not.toContain("N/A");
   });
 
+  it("alternates Tic-Tac-Toe AI turns and starting player while keeping human mode X-first", () => {
+    render(<App />);
+    fireEvent.change(screen.getByRole("combobox", { name: "GAME MODE" }), {
+      target: { value: "ai" },
+    });
+
+    expect(screen.getByText("X is thinking")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Advance AI move →" }));
+    expect(screen.getByText("O is thinking")).toBeTruthy();
+    expect([...getTttCells()].filter((cell) => cell.textContent === "X")).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset board" }));
+    expect(screen.getByText("O is thinking")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Advance AI move →" }));
+    expect(screen.getByText("X is thinking")).toBeTruthy();
+    expect([...getTttCells()].filter((cell) => cell.textContent === "O")).toHaveLength(1);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "GAME MODE" }), {
+      target: { value: "human" },
+    });
+    expect(screen.getByText("Your move")).toBeTruthy();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "GAME MODE" }), {
+      target: { value: "ai" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "AI first player policy" }), {
+      target: { value: "O" },
+    });
+    expect(screen.getByText("O is thinking")).toBeTruthy();
+  });
+
+  it("records completed Tic-Tac-Toe AI matches from actual games and resets statistics on request", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.37);
+    render(<App />);
+    fireEvent.change(screen.getByRole("combobox", { name: "GAME MODE" }), {
+      target: { value: "ai" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "X AI strategy" }), {
+      target: { value: "random" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "O AI strategy" }), {
+      target: { value: "random" },
+    });
+
+    for (let move = 0; move < 9; move++) {
+      fireEvent.click(screen.getByRole("button", { name: "Advance AI move →" }));
+    }
+
+    const stats = screen.getByRole("region", { name: "AI vs AI match statistics" });
+    expect(within(stats).getByText("Games played").nextElementSibling.textContent).toBe("1");
+    const visibleBoard = [...getTttCells()].map((cell) => cell.textContent);
+    fireEvent.click(screen.getByRole("button", { name: "Advance AI move →" }));
+    expect([...getTttCells()].map((cell) => cell.textContent)).toEqual(visibleBoard);
+
+    fireEvent.click(within(stats).getByRole("button", { name: "Reset statistics" }));
+    expect(within(stats).getByText("Games played").nextElementSibling.textContent).toBe("0");
+  });
+
   it("does not display analysis from a board that changed before the scheduled search", async () => {
     vi.useFakeTimers();
     render(<App />);
@@ -104,6 +162,69 @@ describe("React game UI", () => {
     expect(screen.getByText("Undo is not available in Connect Four. Use Reset board to start over.")).toBeTruthy();
     expect(screen.getAllByRole("gridcell")).toHaveLength(42);
     expect(screen.getByRole("grid").querySelectorAll(".piece-R, .piece-Y")).toHaveLength(0);
+  });
+
+  it("alternates Connect Four AI turns and starting player", async () => {
+    vi.useFakeTimers();
+    render(<ConnectFour />);
+    fireEvent.change(screen.getByRole("combobox", { name: "GAME MODE" }), {
+      target: { value: "ai" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Red AI strategy" }), {
+      target: { value: "random" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Yellow AI strategy" }), {
+      target: { value: "random" },
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(screen.getByText("Yellow AI to move")).toBeTruthy();
+    expect(screen.getByRole("grid").querySelectorAll(".piece-R")).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset board" }));
+    expect(screen.getByText("Yellow AI to move")).toBeTruthy();
+    expect(screen.getByRole("grid").querySelectorAll(".piece-R, .piece-Y")).toHaveLength(0);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(screen.getByText("Red AI to move")).toBeTruthy();
+    expect(screen.getByRole("grid").querySelectorAll(".piece-Y")).toHaveLength(1);
+  });
+
+  it("records Connect Four match totals and game length from completed AI play", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    render(<ConnectFour />);
+    fireEvent.change(screen.getByRole("combobox", { name: "GAME MODE" }), {
+      target: { value: "ai" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Red AI strategy" }), {
+      target: { value: "random" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Yellow AI strategy" }), {
+      target: { value: "random" },
+    });
+
+    for (let move = 0; move < 20 && !screen.queryByText("Red wins!"); move++) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+    }
+
+    expect(screen.getByText("Red wins!")).toBeTruthy();
+    const stats = screen.getByRole("region", { name: "AI vs AI match statistics" });
+    expect(within(stats).getByText("Games played").nextElementSibling.textContent).toBe("1");
+    expect(within(stats).getByText("Red wins").nextElementSibling.textContent).toBe("1 (100.0%)");
+    expect(within(stats).getByText("Average game length").nextElementSibling.textContent).toBe("19.0 moves");
+    expect(within(stats).getByText("Started by Red / Yellow").nextElementSibling.textContent).toBe("1 / 0");
+
+    const pieceCount = screen.getByRole("grid").querySelectorAll(".piece-R, .piece-Y").length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(screen.getByRole("grid").querySelectorAll(".piece-R, .piece-Y")).toHaveLength(pieceCount);
   });
 
   it("shows the coordinator's actual status instead of a static active badge", () => {
